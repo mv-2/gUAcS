@@ -1,3 +1,4 @@
 /src/__pycache__
 /target
 /configs/*
+/output_data/rays/*.csv

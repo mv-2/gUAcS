@@ -2,6 +2,17 @@ from pydantic.dataclasses import dataclass
 from pydantic import BaseModel
 from typing import List, Tuple
 import json
+import numpy as np
+
+
+class Ray:
+    def __init__(self, path: str):
+        ray_id = path.split("/")[-1].split(".csv")[0]
+        data = np.loadtxt(path, delimiter=",", dtype=float)
+        self.range_vals = data[:, 0]
+        self.depth_vals = data[:, 1]
+        self.time_vals = data[:, 2]
+        self.ray_id = ray_id
 
 
 @dataclass
@@ -30,6 +41,7 @@ class SourceConfig:
 class ProgConfig:
     max_it: int
     depth_step: float
+    save_to_csv: bool
 
 
 @dataclass

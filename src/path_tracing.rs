@@ -1,7 +1,10 @@
-use crate::interface::{Config, ProgConfig, SourceConfig};
+use crate::interface::{Config, ProgConfig, SourceConfig, OUTPUT_DIR};
 use crate::math_util::deboor_alg;
+use csv::Writer;
 use rayon::prelude::*;
 use serde::Deserialize;
+use std::error::Error;
+use uuid::Uuid;
 
 /// Stores data on body geometry
 #[derive(Deserialize, Debug)]
@@ -27,6 +30,8 @@ pub struct Ray {
     pub depth_vals: Vec<f64>,
     pub time_vals: Vec<f64>,
     pub ray_param: f64,
+    pub ray_iter: usize,
+    pub ray_id: Uuid,
 }
 
 /// Stores data required to initialise rays
@@ -35,6 +40,7 @@ pub struct RayInit {
     depth_pos: f64,
     init_time: f64,
     init_ang: f64,
+    init_iter: usize,
 }
 
 impl RayInit {
@@ -49,6 +55,7 @@ impl RayInit {
             depth_pos: source.depth_pos,
             init_time: 0.0,
             init_ang,
+            init_iter: 0_usize,
         }
     }
 }
@@ -89,16 +96,20 @@ impl Ray {
             depth_vals: vec![0.0; prog_config.max_it + 1],
             time_vals: vec![0.0; prog_config.max_it + 1],
             ray_param: ang.cos() / ssp.interp_sound_speed(init_source.depth_pos),
+            ray_iter: 0,
+            ray_id: Uuid::new_v4(),
         };
 
         ray.range_vals[0] = init_source.range_pos;
         ray.depth_vals[0] = init_source.depth_pos;
         ray.time_vals[0] = init_source.init_time;
 
-        for i in 0..prog_config.max_it {
-            c_i = ssp.interp_sound_speed(ray.depth_vals[i]);
-            c_i1 = ssp.interp_sound_speed(ray.depth_vals[i] + depth_dir * prog_config.depth_step);
-            g_i = (c_i1 - c_i) / 2.0;
+        while ray.ray_iter < prog_config.max_it - init_source.init_iter {
+            c_i = ssp.interp_sound_speed(ray.depth_vals[ray.ray_iter]);
+            c_i1 = ssp.interp_sound_speed(
+                ray.depth_vals[ray.ray_iter] + depth_dir * prog_config.depth_step,
+            );
+            g_i = (c_i1 - c_i) / prog_config.depth_step;
             if (ray.ray_param * c_i1).powi(2) < 1.0 {
                 range_step = ((1.0 - (ray.ray_param * c_i).powi(2)).sqrt()
                     - (1.0 - (ray.ray_param * c_i1).powi(2)).sqrt())
@@ -107,8 +118,10 @@ impl Ray {
                     / (1.0 + (1.0 - (ray.ray_param * c_i1).powi(2)).sqrt()))
                 .ln()
                     / g_i.abs();
-                ray.depth_vals[i + 1] = ray.depth_vals[i] + depth_dir * prog_config.depth_step;
+                ray.depth_vals[ray.ray_iter + 1] =
+                    ray.depth_vals[ray.ray_iter] + depth_dir * prog_config.depth_step;
             } else {
+                ray.depth_vals[ray.ray_iter + 1] = ray.depth_vals[ray.ray_iter];
                 depth_dir = -depth_dir;
                 range_step = 2.0 * (1.0 - (ray.ray_param * c_i).powi(2)) / (ray.ray_param * g_i);
                 time_step = 2.0
@@ -117,10 +130,31 @@ impl Ray {
                         .ln()
                     / g_i.abs();
             }
-            ray.range_vals[i + 1] = ray.range_vals[i] + range_dir * range_step;
-            ray.time_vals[i + 1] = ray.time_vals[i] + time_step;
+            ray.range_vals[ray.ray_iter + 1] =
+                ray.range_vals[ray.ray_iter] + range_dir * range_step;
+            ray.time_vals[ray.ray_iter + 1] = ray.time_vals[ray.ray_iter] + time_step;
+            ray.ray_iter += 1;
+        }
+
+        if prog_config.save_to_csv {
+            match ray.write_to_csv() {
+                Ok(_) => (),
+                Err(_) => panic!("Ray {:} could not be written to csv", ray.ray_id),
+            }
         }
         ray
+    }
+
+    pub fn write_to_csv(&self) -> Result<(), Box<dyn Error>> {
+        let mut wtr = Writer::from_path(format!("{OUTPUT_DIR}/rays/{:}.csv", self.ray_id))?;
+        for i in 0..self.ray_iter {
+            wtr.write_record(&[
+                self.range_vals[i].to_string(),
+                self.depth_vals[i].to_string(),
+                self.time_vals[i].to_string(),
+            ])?;
+        }
+        Ok(())
     }
 }
 

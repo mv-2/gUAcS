@@ -2,6 +2,9 @@ use crate::path_tracing::{Body, HalfSpace, Ssp};
 use serde::Deserialize;
 use std::fs::File;
 
+pub const OUTPUT_DIR: &str = "output_data";
+pub const CONFIG_PATH: &str = "configs";
+
 /// Overall config opject to aid in loading serialized config jsons
 #[derive(Deserialize, Debug)]
 pub struct Config {
@@ -15,15 +18,16 @@ pub struct Config {
 pub struct ProgConfig {
     pub max_it: usize,
     pub depth_step: f64,
+    pub save_to_csv: bool,
 }
 
 /// Stores environmental constant data for simulation (SSP and density profile information)
 #[derive(Deserialize, Debug)]
 pub struct EnvConfig {
     pub ssp: Ssp,
-    swell_height: f64,
-    bodies: Vec<Body>,
-    halfspaces: Vec<HalfSpace>,
+    pub swell_height: f64,
+    pub bodies: Vec<Body>,
+    pub halfspaces: Vec<HalfSpace>,
 }
 
 /// Stores information of single source in sound field

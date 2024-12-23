@@ -26,8 +26,8 @@ if __name__ == "__main__":
         SourceConfig(
             range_pos=0.0,
             depth_pos=1000.0,
-            ray_fan_limits=(-0.24, 0.24),
-            n_rays=100,
+            ray_fan_limits=(-0.1, 0.1),
+            n_rays=2,
             source_level=150,
         )
     ]
@@ -62,7 +62,7 @@ if __name__ == "__main__":
         halfspaces=halfspaces,
     )
 
-    prog_config = ProgConfig(max_it=int(1e6), depth_step=1.0)
+    prog_config = ProgConfig(max_it=int(1e4), depth_step=1.0, save_to_csv=True)
 
     config = Config(prog_config=prog_config, env_config=env_config, sources=sources)
 
