@@ -42,6 +42,7 @@ class ProgConfig:
     max_it: int
     depth_step: float
     save_to_csv: bool
+    max_range: float
 
 
 @dataclass

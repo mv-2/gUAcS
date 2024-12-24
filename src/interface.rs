@@ -19,6 +19,7 @@ pub struct ProgConfig {
     pub max_it: usize,
     pub depth_step: f64,
     pub save_to_csv: bool,
+    pub max_range: f64,
 }
 
 /// Stores environmental constant data for simulation (SSP and density profile information)

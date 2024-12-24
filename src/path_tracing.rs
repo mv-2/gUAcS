@@ -104,11 +104,12 @@ impl Ray {
         ray.depth_vals[0] = init_source.depth_pos;
         ray.time_vals[0] = init_source.init_time;
 
-        while ray.ray_iter < prog_config.max_it - init_source.init_iter {
-            c_i = ssp.interp_sound_speed(ray.depth_vals[ray.ray_iter]);
-            c_i1 = ssp.interp_sound_speed(
-                ray.depth_vals[ray.ray_iter] + depth_dir * prog_config.depth_step,
-            );
+        c_i = ssp.interp_sound_speed(ray.depth_vals[0]);
+        c_i1 = ssp.interp_sound_speed(ray.depth_vals[0] + depth_dir * prog_config.depth_step);
+
+        while (ray.ray_iter < prog_config.max_it - init_source.init_iter)
+            && (ray.range_vals[ray.ray_iter].abs() < prog_config.max_range)
+        {
             g_i = (c_i1 - c_i) / prog_config.depth_step;
             if (ray.ray_param * c_i1).powi(2) < 1.0 {
                 range_step = ((1.0 - (ray.ray_param * c_i).powi(2)).sqrt()
@@ -120,6 +121,7 @@ impl Ray {
                     / g_i.abs();
                 ray.depth_vals[ray.ray_iter + 1] =
                     ray.depth_vals[ray.ray_iter] + depth_dir * prog_config.depth_step;
+                c_i = c_i1;
             } else {
                 ray.depth_vals[ray.ray_iter + 1] = ray.depth_vals[ray.ray_iter];
                 depth_dir = -depth_dir;
@@ -130,6 +132,9 @@ impl Ray {
                         .ln()
                     / g_i.abs();
             }
+            c_i1 = ssp.interp_sound_speed(
+                ray.depth_vals[ray.ray_iter + 1] + depth_dir * prog_config.depth_step,
+            );
             ray.range_vals[ray.ray_iter + 1] =
                 ray.range_vals[ray.ray_iter] + range_dir * range_step;
             ray.time_vals[ray.ray_iter + 1] = ray.time_vals[ray.ray_iter] + time_step;

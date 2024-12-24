@@ -62,7 +62,9 @@ if __name__ == "__main__":
         halfspaces=halfspaces,
     )
 
-    prog_config = ProgConfig(max_it=int(1e4), depth_step=1.0, save_to_csv=True)
+    prog_config = ProgConfig(
+        max_it=int(1e5), depth_step=1.0, save_to_csv=True, max_range=2e5
+    )
 
     config = Config(prog_config=prog_config, env_config=env_config, sources=sources)
 
