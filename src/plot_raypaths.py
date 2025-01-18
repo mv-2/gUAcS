@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 from glob import glob
-from python_interface_tools import Ray, Config
+from python_interface_tools import Ray, Body
 from typing import List
 from scipy.interpolate import splev
 import json
@@ -8,6 +8,9 @@ import json
 
 def plot_rays(rays: List[Ray]):
     cfg_file = json.load(open("configs/run_config.json"))
+    bodies = []
+    for bd in cfg_file["env_config"]["bodies"]:
+        bodies += [Body(**bd)]
     ssp = cfg_file["env_config"]["ssp"]
     knots = ssp["ssp_knots"]
     coefs = ssp["ssp_coefs"]
@@ -29,6 +32,8 @@ def plot_rays(rays: List[Ray]):
     ax_rays.set_xlabel("Range [$km$]")
 
     ax_g.plot(g_profile, depth_range, c="red")
+    for bd in bodies:
+        ax_rays.fill([rv / 1000 for rv in bd.range_vals], bd.depth_vals, c="r")
 
     for ray in rays:
         ax_rays.plot(ray.range_vals / 1000, ray.depth_vals, c="k")

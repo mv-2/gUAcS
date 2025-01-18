@@ -1,9 +1,12 @@
 use crate::interface::{Config, ProgConfig, SourceConfig, OUTPUT_DIR};
 use crate::math_util::deboor_alg;
+use core::f64;
 use csv::Writer;
 use rayon::prelude::*;
 use serde::Deserialize;
+use std::arch::x86_64::_CMP_NEQ_US;
 use std::error::Error;
+use std::ops::RangeInclusive;
 use uuid::Uuid;
 
 /// Stores data on body geometry
@@ -111,7 +114,7 @@ impl Ray {
             && (ray.range_vals[ray.ray_iter].abs() < prog_config.max_range)
         {
             g_i = (c_i1 - c_i) / prog_config.depth_step;
-            if (ray.ray_param * c_i1).powi(2) < 1.0 {
+            if ray.ray_param * c_i1 < 1.0 {
                 range_step = ((1.0 - (ray.ray_param * c_i).powi(2)).sqrt()
                     - (1.0 - (ray.ray_param * c_i1).powi(2)).sqrt())
                     / (ray.ray_param * g_i);
@@ -160,6 +163,96 @@ impl Ray {
             ])?;
         }
         Ok(())
+    }
+}
+
+impl Body {
+    /// Checks for intersection between ['Ray'] and ['Body'] self struct over current ray
+    /// interation step
+    pub fn check_finite_intersection(&self, ray: Ray, step: usize) -> Option<(f64, f64, usize)> {
+        let mut ray_dist_vals: Vec<Option<f64>> = vec![None; self.range_vals.len() - 1];
+        let mut edge_dist: f64;
+        let ray_range_step: f64 = ray.range_vals[step + 1] - ray.range_vals[step];
+        let ray_depth_step: f64 = ray.depth_vals[step + 1] - ray.depth_vals[step];
+        let mut edge_depth_step: f64;
+        let mut edge_range_step: f64;
+        let edge_range: RangeInclusive<f64> = RangeInclusive::new(0.0, 1.0);
+        // iterate over each edge in polygon to find valid intersections
+        for i in 0..(self.range_vals.len() - 1) {
+            edge_depth_step = self.depth_vals[i + 1] - self.depth_vals[i];
+            edge_range_step = self.range_vals[i + 1] - self.range_vals[i];
+            // check for parallel edge and ray direction to save computation effort
+            if edge_range_step / edge_depth_step == ray_range_step / ray_depth_step {
+                edge_dist = ((self.range_vals[i] - ray.range_vals[step]) * ray_depth_step
+                    - (self.depth_vals[i] - ray.depth_vals[step]) * ray_range_step)
+                    / ((self.depth_vals[i + 1] - self.depth_vals[i]) * ray_range_step
+                        - (self.range_vals[i + 1] - self.range_vals[i]) * ray_depth_step);
+                // check if edge distance parameter is valid
+                if edge_range.contains(&edge_dist) {
+                    ray_dist_vals[i] = match ray_depth_step.is_sign_positive() {
+                        true => intersection_ray_dist_param(
+                            edge_dist,
+                            edge_range_step,
+                            ray_range_step,
+                            self.range_vals[i],
+                            ray.range_vals[step],
+                        ),
+                        false => intersection_ray_dist_param(
+                            edge_dist,
+                            edge_depth_step,
+                            ray_depth_step,
+                            self.depth_vals[i],
+                            ray.depth_vals[step],
+                        ),
+                    }
+                }
+            }
+        }
+        // Check if there are any valid intersections calculated
+        if !ray_dist_vals
+            .iter()
+            .filter(|&x| !x.is_none())
+            .collect::<Vec<&Option<f64>>>()
+            .is_empty()
+        {
+            let ray_dists_numeric: Vec<f64> = ray_dist_vals
+                .iter()
+                .map(|&x| x.unwrap_or(f64::INFINITY))
+                .collect();
+            // Using direct unwrap here as None values should not be present in this and a minimum
+            // value should always exist
+            let edge_id: usize = ray_dists_numeric
+                .iter()
+                .enumerate()
+                .max_by(|(_, a), (_, b)| a.total_cmp(b))
+                .map(|(id, _)| id)
+                .expect(
+                    "There is no minimum distance when calculating intersection for {ray.ray_id}",
+                );
+            Some((
+                ray.range_vals[step] + ray_dists_numeric[edge_id] * ray_range_step,
+                ray.depth_vals[step] + ray_dists_numeric[edge_id] * ray_depth_step,
+                edge_id,
+            ))
+        } else {
+            None
+        }
+    }
+}
+
+/// function is range/depth agnostic as detailed in theory document
+fn intersection_ray_dist_param(
+    edge_dist_param: f64,
+    edge_step: f64,
+    ray_step: f64,
+    edge_point_0: f64,
+    ray_point_0: f64,
+) -> Option<f64> {
+    let dist: f64 = ((edge_point_0 - ray_point_0) + edge_dist_param * edge_step) / ray_step;
+    if dist.is_sign_positive() {
+        Some(dist)
+    } else {
+        None
     }
 }
 

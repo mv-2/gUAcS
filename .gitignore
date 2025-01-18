@@ -2,3 +2,12 @@
 /target
 /configs/*
 /output_data/rays/*.csv
+*.dvi
+*.log
+*.aux
+*.bcf
+*.xml
+*.toc
+*.bbl
+*.log
+*.blg
