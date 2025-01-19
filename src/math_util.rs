@@ -4,12 +4,12 @@ pub fn deboor_alg(x: f64, knots: &[f64], coeffs: &[f64], order: &usize) -> f64 {
     let k: usize = (1..knots.len())
         .find(|&i| knots[i] >= x)
         .expect("Evaluation point does not lie within knot intervals")
-        + 1;
+        - 1;
 
-    let p: usize = order - 1;
+    let p: usize = *order;
     let mut i: usize;
     let mut alpha_j: f64;
-    let mut d_coeff: Vec<f64> = (0..=p).map(|i| coeffs[i + k - p]).collect();
+    let mut d_coeff: Vec<f64> = (0..=p).map(|j| coeffs[j + k - p]).collect();
 
     for r in 1..=p {
         for j in (r..=p).rev() {
@@ -20,4 +20,44 @@ pub fn deboor_alg(x: f64, knots: &[f64], coeffs: &[f64], order: &usize) -> f64 {
     }
 
     d_coeff[p]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn deboor_test() {
+        const POINTS: [f64; 4] = [1.5, 30.0, 57.0, 99.0];
+        const VALS: [f64; 4] = [-6.3875, -104.0, -121.55, -3.95];
+        let knots: Vec<f64> = vec![
+            0.0, 0.0, 0.0, 0.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 100.0, 100.0, 100.0,
+            100.0,
+        ];
+        let coefs: Vec<f64> = vec![
+            1.0,
+            -32.33333333,
+            -72.33333333,
+            -105.66666667,
+            -120.66666667,
+            -125.66666667,
+            -120.66666667,
+            -105.66666667,
+            -72.33333333,
+            -32.33333333,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        ];
+        let order: usize = 3;
+        let calc_vals: Vec<f64> = POINTS
+            .iter()
+            .map(|&x| deboor_alg(x, &knots, &coefs, &order))
+            .collect::<Vec<f64>>();
+        println!("{:#?}", calc_vals);
+        for (i, &val) in calc_vals.iter().enumerate() {
+            assert!((val - VALS[i]).abs() < 0.0001);
+        }
+    }
 }
