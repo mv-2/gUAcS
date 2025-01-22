@@ -4,7 +4,6 @@ use core::f64;
 use csv::Writer;
 use rayon::prelude::*;
 use serde::Deserialize;
-use std::arch::x86_64::_CMP_NEQ_US;
 use std::error::Error;
 use std::ops::RangeInclusive;
 use uuid::Uuid;
@@ -182,14 +181,14 @@ impl Body {
             edge_depth_step = self.depth_vals[i + 1] - self.depth_vals[i];
             edge_range_step = self.range_vals[i + 1] - self.range_vals[i];
             // check for parallel edge and ray direction to save computation effort
-            if edge_range_step / edge_depth_step == ray_range_step / ray_depth_step {
+            if edge_range_step / edge_depth_step != ray_range_step / ray_depth_step {
                 edge_dist = ((self.range_vals[i] - ray.range_vals[step]) * ray_depth_step
                     - (self.depth_vals[i] - ray.depth_vals[step]) * ray_range_step)
                     / ((self.depth_vals[i + 1] - self.depth_vals[i]) * ray_range_step
                         - (self.range_vals[i + 1] - self.range_vals[i]) * ray_depth_step);
                 // check if edge distance parameter is valid
                 if edge_range.contains(&edge_dist) {
-                    ray_dist_vals[i] = match ray_depth_step.is_sign_positive() {
+                    ray_dist_vals[i] = match ray_range_step >= 0.0 {
                         true => intersection_ray_dist_param(
                             edge_dist,
                             edge_range_step,
@@ -224,7 +223,7 @@ impl Body {
             let edge_id: usize = ray_dists_numeric
                 .iter()
                 .enumerate()
-                .max_by(|(_, a), (_, b)| a.total_cmp(b))
+                .min_by(|(_, a), (_, b)| a.total_cmp(b))
                 .map(|(id, _)| id)
                 .expect(
                     "There is no minimum distance when calculating intersection for {ray.ray_id}",
@@ -256,6 +255,7 @@ fn intersection_ray_dist_param(
     }
 }
 
+/// Driver function to trace all rays from [`Config`] struct
 pub fn trace_from_config(cfg: Config) -> Vec<Ray> {
     let mut init_sources: Vec<RayInit> = vec![];
     for source in cfg.sources {
@@ -271,4 +271,47 @@ pub fn trace_from_config(cfg: Config) -> Vec<Ray> {
             Ray::trace_from_init_source(ray_source, &cfg.prog_config, &cfg.env_config.ssp)
         })
         .collect()
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn ray_intersection_tests() {
+        // test 1 expect success
+        let test_body: Body = Body {
+            range_vals: vec![-1.0, 1.0, 1.0, -1.0, -1.0],
+            depth_vals: vec![-1.0, -1.0, 1.0, 1.0, -1.0],
+        };
+
+        let test_ray: Ray = Ray {
+            range_vals: vec![-10.0, 10.0],
+            depth_vals: vec![-1.0, 1.0],
+            ray_iter: 1,
+            ray_id: Uuid::new_v4(),
+            ray_param: 1.0,
+            time_vals: vec![0.0, 1.0],
+        };
+        let ans: (f64, f64, usize) = test_body.check_finite_intersection(test_ray, 0).unwrap();
+        assert!(ans.2 == 3);
+        assert!((ans.1 + 1.0 - 9.0 / 10.0).abs() < 1e-8);
+        assert!((ans.0 + 1.0).abs() < 1e-8);
+
+        // test 2 parrallel line failure
+        let test_body: Body = Body {
+            range_vals: vec![0.0, 100.0],
+            depth_vals: vec![0.0, 0.0],
+        };
+
+        let test_ray: Ray = Ray {
+            range_vals: vec![-10.0, 10.0],
+            depth_vals: vec![-1.0, -1.0],
+            ray_iter: 1,
+            ray_id: Uuid::new_v4(),
+            ray_param: 1.0,
+            time_vals: vec![0.0, 1.0],
+        };
+        let ans: Option<(f64, f64, usize)> = test_body.check_finite_intersection(test_ray, 0);
+        assert!(ans.is_none());
+    }
 }

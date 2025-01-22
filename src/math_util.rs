@@ -55,7 +55,7 @@ mod tests {
             .iter()
             .map(|&x| deboor_alg(x, &knots, &coefs, &order))
             .collect::<Vec<f64>>();
-        println!("{:#?}", calc_vals);
+        // println!("{:#?}", calc_vals);
         for (i, &val) in calc_vals.iter().enumerate() {
             assert!((val - VALS[i]).abs() < 0.0001);
         }
