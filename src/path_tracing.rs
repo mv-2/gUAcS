@@ -73,7 +73,7 @@ pub struct Ssp {
 impl Ssp {
     /// Calculate sound speed value at given depth
     pub fn interp_sound_speed(&self, depth: f64) -> f64 {
-        deboor_alg(depth, &self.ssp_knots, &self.ssp_coefs, &self.ssp_degree)
+        deboor_alg(depth, &self.ssp_knots, &self.ssp_coefs, self.ssp_degree)
     }
 }
 

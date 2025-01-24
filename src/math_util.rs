@@ -1,25 +1,24 @@
 /// Calculates value for B-spline based on knots, coefficients, order and position
-pub fn deboor_alg(x: f64, knots: &[f64], coeffs: &[f64], order: &usize) -> f64 {
+pub fn deboor_alg(x: f64, knots: &[f64], coeffs: &[f64], order: usize) -> f64 {
     // Assume that knots are sorted into increasing order
     let k: usize = (1..knots.len())
         .find(|&i| knots[i] >= x)
         .expect("Evaluation point does not lie within knot intervals")
         - 1;
 
-    let p: usize = *order;
     let mut i: usize;
     let mut alpha_j: f64;
-    let mut d_coeff: Vec<f64> = (0..=p).map(|j| coeffs[j + k - p]).collect();
+    let mut d_coeff: Vec<f64> = (0..=order).map(|j| coeffs[j + k - order]).collect();
 
-    for r in 1..=p {
-        for j in (r..=p).rev() {
-            i = j + k - p;
+    for r in 1..=order {
+        for j in (r..=order).rev() {
+            i = j + k - order;
             alpha_j = (x - knots[i]) / (knots[j + 1 + k - r] - knots[i]);
             d_coeff[j] = (1.0 - alpha_j) * d_coeff[j - 1] + alpha_j * d_coeff[j];
         }
     }
 
-    d_coeff[p]
+    d_coeff[order]
 }
 
 #[cfg(test)]
@@ -53,7 +52,7 @@ mod tests {
         let order: usize = 3;
         let calc_vals: Vec<f64> = POINTS
             .iter()
-            .map(|&x| deboor_alg(x, &knots, &coefs, &order))
+            .map(|&x| deboor_alg(x, &knots, &coefs, order))
             .collect::<Vec<f64>>();
         // println!("{:#?}", calc_vals);
         for (i, &val) in calc_vals.iter().enumerate() {

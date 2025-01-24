@@ -106,6 +106,7 @@ The generic ray tracing algorithm is included below in Algorithm \ref{alg:ray}.
       \State $t_{i+1}\gets t_i+\Delta t$
       \State $i\gets i+1$
     \EndWhile
+    \Return $\bm{r}, \bm{z}, \bm{t}$
   \end{algorithmic}
 \end{algorithm}
 
@@ -152,6 +153,27 @@ Now split into equations for $x$ and $y$.
 Equation \ref{eq:edge_dist} can be used to directly calculate $\tau$ and by extension $t$ can then be calculated from Equation \ref{eq:ray_dist}. Note that in this form of the equation if both the direction of the edge and the ray is the same such that $\Delta r_{edge} = k\cdot\Delta r_{ray}$ and $\Delta z_{edge} = k\cdot\Delta z_{ray}$ for $k\in\mathbb{R}$ then the denominator of this equations tends to $0$ resulting in an undefined result. This makes intuitive sense as there should be no solution for parallel lines having a point of intersection. As stated above the calculated intersection is valid if and only if $t\geq0$ and $\tau\in[0, 1]$. 
 
 \subsubsection{Reflection Angle}
+
+\section{General Functions}
+\subsection{Sound Speed Profile Representation}
+The sound speed profile is treated as range invariant in the current \texttt{gUAcS} package. The profile is expressed as the knots, coefficients and degree of a B-spline within the configuration files for the program. This requires the B-spline to be evaluated at each depth point for the program. To do so De Boor's Algorithm is implemented where; $\{c_{i}\}$ is the set of spline coefficients, $\{t_{i}\}$ is the set of spline knots and $p$ is the order of the spline. The algorithm is shown below in Algorithm \ref{alg:deboor}.
+\begin{algorithm}[H]
+  \caption{De Boor's Algorithm}\label{alg:deboor}
+  \begin{algorithmic}
+    \Initialise{$x$}
+    \State $k\gets i$ for which $i$ satisfies $t_{i} > x$ and $t_{i-1} \leq x$
+    \State $d_i\gets c_{j + k -order}$ for $j\in{0,1,...,p}$
+    \For{$r\gets 1$ to $p$}
+      \For{$j\gets p$ to $r$} 
+        \State $i\gets j + k - p$
+        \State $\alpha_j = \frac{x - t_i}{t_{j + 1 + k - r} - t_{i}}$
+        \State $d_j = (1 - \alpha_j)\cdot d_{j-1} + \alpha_j\cdot d_{j}$
+      \EndFor
+    \EndFor
+    \Return $d_{p}$
+  \end{algorithmic}
+\end{algorithm}
+
 
 \nocite{*}
 \printbibliography
