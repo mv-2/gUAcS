@@ -50,7 +50,7 @@ if __name__ == "__main__":
         )
     ]
 
-    munk_depths = range(0, 5000, 1)
+    munk_depths = range(0, 5000, 10)
     munk_vals = [munk_profile(z) for z in munk_depths]
 
     (ssp_knots, ssp_coefs, ssp_degree) = splrep(munk_depths, munk_vals, k=3)

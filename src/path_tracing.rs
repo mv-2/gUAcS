@@ -168,11 +168,11 @@ impl Ray {
 impl Body {
     /// Checks for intersection between ['Ray'] and ['Body'] self struct over current ray
     /// interation step
-    pub fn check_finite_intersection(&self, ray: Ray, step: usize) -> Option<(f64, f64, usize)> {
+    pub fn check_finite_intersection(&self, ray: &Ray) -> Option<(f64, f64, usize)> {
         let mut ray_dist_vals: Vec<Option<f64>> = vec![None; self.range_vals.len() - 1];
         let mut edge_dist: f64;
-        let ray_range_step: f64 = ray.range_vals[step + 1] - ray.range_vals[step];
-        let ray_depth_step: f64 = ray.depth_vals[step + 1] - ray.depth_vals[step];
+        let ray_range_step: f64 = ray.range_vals[ray.ray_iter + 1] - ray.range_vals[ray.ray_iter];
+        let ray_depth_step: f64 = ray.depth_vals[ray.ray_iter + 1] - ray.depth_vals[ray.ray_iter];
         let mut edge_depth_step: f64;
         let mut edge_range_step: f64;
         let edge_range: RangeInclusive<f64> = RangeInclusive::new(0.0, 1.0);
@@ -182,8 +182,8 @@ impl Body {
             edge_range_step = self.range_vals[i + 1] - self.range_vals[i];
             // check for parallel edge and ray direction to save computation effort
             if edge_range_step / edge_depth_step != ray_range_step / ray_depth_step {
-                edge_dist = ((self.range_vals[i] - ray.range_vals[step]) * ray_depth_step
-                    - (self.depth_vals[i] - ray.depth_vals[step]) * ray_range_step)
+                edge_dist = ((self.range_vals[i] - ray.range_vals[ray.ray_iter]) * ray_depth_step
+                    - (self.depth_vals[i] - ray.depth_vals[ray.ray_iter]) * ray_range_step)
                     / ((self.depth_vals[i + 1] - self.depth_vals[i]) * ray_range_step
                         - (self.range_vals[i + 1] - self.range_vals[i]) * ray_depth_step);
                 // check if edge distance parameter is valid
@@ -194,14 +194,14 @@ impl Body {
                             edge_range_step,
                             ray_range_step,
                             self.range_vals[i],
-                            ray.range_vals[step],
+                            ray.range_vals[ray.ray_iter],
                         ),
                         false => intersection_ray_dist_param(
                             edge_dist,
                             edge_depth_step,
                             ray_depth_step,
                             self.depth_vals[i],
-                            ray.depth_vals[step],
+                            ray.depth_vals[ray.ray_iter],
                         ),
                     }
                 }
@@ -229,13 +229,35 @@ impl Body {
                     "There is no minimum distance when calculating intersection for {ray.ray_id}",
                 );
             Some((
-                ray.range_vals[step] + ray_dists_numeric[edge_id] * ray_range_step,
-                ray.depth_vals[step] + ray_dists_numeric[edge_id] * ray_depth_step,
+                ray.range_vals[ray.ray_iter] + ray_dists_numeric[edge_id] * ray_range_step,
+                ray.depth_vals[ray.ray_iter] + ray_dists_numeric[edge_id] * ray_depth_step,
                 edge_id,
             ))
         } else {
             None
         }
+    }
+
+    pub fn calculate_reflection(&self, ray: &Ray) -> Option<f64> {
+        // let intersection_ans: (f64, f64, usize) = match self.check_finite_intersection(ray) {
+        //     Some(ans) => ans,
+        //     None => return None,
+        // };
+        let intersection_ans: (f64, f64, usize) = self.check_finite_intersection(ray)?;
+        //TODO Add time interpolation
+        // ray.range_vals[ray.ray_iter + 1] = intersection_ans.0;
+        // ray.depth_vals[ray.ray_iter + 1] = intersection_ans.1;
+        let ray_ang: f64 = (ray.depth_vals[ray.ray_iter + 1] - ray.depth_vals[ray.ray_iter])
+            .atan2(ray.range_vals[ray.ray_iter + 1] - ray.range_vals[ray.ray_iter]);
+        let side_ang: f64 = self.get_edge_ang(intersection_ans.2);
+        Some(ray_ang + 2.0 * side_ang)
+    }
+
+    // calculates angle of edge # edge_id
+    //TODO check wrapping
+    fn get_edge_ang(&self, edge_id: usize) -> f64 {
+        (self.depth_vals[edge_id + 1] - self.depth_vals[edge_id])
+            .atan2(self.range_vals[edge_id + 1] - self.range_vals[edge_id])
     }
 }
 
@@ -287,12 +309,12 @@ mod test {
         let test_ray: Ray = Ray {
             range_vals: vec![-10.0, 10.0],
             depth_vals: vec![-1.0, 1.0],
-            ray_iter: 1,
+            ray_iter: 0,
             ray_id: Uuid::new_v4(),
             ray_param: 1.0,
             time_vals: vec![0.0, 1.0],
         };
-        let ans: (f64, f64, usize) = test_body.check_finite_intersection(test_ray, 0).unwrap();
+        let ans: (f64, f64, usize) = test_body.check_finite_intersection(&test_ray).unwrap();
         assert!(ans.2 == 3);
         assert!((ans.1 + 1.0 - 9.0 / 10.0).abs() < 1e-8);
         assert!((ans.0 + 1.0).abs() < 1e-8);
@@ -306,12 +328,33 @@ mod test {
         let test_ray: Ray = Ray {
             range_vals: vec![-10.0, 10.0],
             depth_vals: vec![-1.0, -1.0],
-            ray_iter: 1,
+            ray_iter: 0,
             ray_id: Uuid::new_v4(),
             ray_param: 1.0,
             time_vals: vec![0.0, 1.0],
         };
-        let ans: Option<(f64, f64, usize)> = test_body.check_finite_intersection(test_ray, 0);
+        let ans: Option<(f64, f64, usize)> = test_body.check_finite_intersection(&test_ray);
         assert!(ans.is_none());
+    }
+
+    #[test]
+    fn reflection_test() {
+        // test 1 expect success
+        let test_body: Body = Body {
+            range_vals: vec![-1.0, 1.0, 1.0, -1.0, -1.0],
+            depth_vals: vec![-1.0, -1.0, 1.0, 1.0, -1.0],
+        };
+
+        let test_ray: Ray = Ray {
+            range_vals: vec![-10.0, 0.0],
+            depth_vals: vec![-1.0, 0.0],
+            ray_iter: 0,
+            ray_id: Uuid::new_v4(),
+            ray_param: 1.0,
+            time_vals: vec![0.0, 1.0],
+        };
+
+        let ang_out: f64 = test_body.calculate_reflection(&test_ray).unwrap();
+        println!("{ang_out}");
     }
 }

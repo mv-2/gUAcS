@@ -5,8 +5,10 @@ pub mod path_tracing;
 use crate::interface::{Config, CONFIG_PATH};
 use crate::path_tracing::{trace_from_config, Ray};
 use glob::glob;
+use pyo3::prelude::*;
 use std::fs::remove_file;
 
+#[pyfunction]
 fn main() {
     for path in glob("output_data/rays/*.csv").expect("Failed to find output_data files") {
         match path {

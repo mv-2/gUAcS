@@ -67,4 +67,4 @@ class Config(BaseModel):
 
     def write_to_json(self, save_path: str):
         with open(save_path, "w") as f:
-            json.dump(json.loads(self.json()), f)
+            json.dump(json.loads(self.json()), fp=f, indent=4)
