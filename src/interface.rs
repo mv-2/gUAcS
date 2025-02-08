@@ -2,7 +2,7 @@ use crate::path_tracing::{Body, HalfSpace, Ssp};
 use serde::Deserialize;
 use std::fs::File;
 
-pub const OUTPUT_DIR: &str = "output_data";
+pub const OUTPUT_DIR: &str = "../output_data";
 pub const CONFIG_PATH: &str = "configs";
 
 /// Overall config opject to aid in loading serialized config jsons

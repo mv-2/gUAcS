@@ -42,7 +42,7 @@ def plot_rays(rays: List[Ray]):
 
 
 if __name__ == "__main__":
-    ray_names = glob("output_data/rays/*.csv")
+    ray_names = glob("output_data/*.csv")
     rays = [None] * len(ray_names)
     for i, fn in enumerate(ray_names):
         rays[i] = Ray(fn)

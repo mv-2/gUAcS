@@ -1,7 +1,8 @@
-use crate::interface::{Config, ProgConfig, SourceConfig, OUTPUT_DIR};
+use crate::interface::{Config, ProgConfig, SourceConfig};
 use crate::math_util::deboor_alg;
 use core::f64;
 use csv::Writer;
+use pyo3::prelude::*;
 use rayon::prelude::*;
 use serde::Deserialize;
 use std::error::Error;
@@ -14,7 +15,7 @@ pub struct Body {
     // polygonal definition only
     range_vals: Vec<f64>,
     depth_vals: Vec<f64>,
-    // TODO bounding box values to be added as later optimisation
+    // TODO: bounding box values to be added as later optimisation
 }
 
 /// Stores halfspace geometry and physical property data
@@ -26,14 +27,21 @@ pub struct HalfSpace {
 }
 
 /// Stores Ray propagation data
+#[pyclass]
 #[derive(Debug)]
 pub struct Ray {
+    #[pyo3(get, set)]
     pub range_vals: Vec<f64>,
+    #[pyo3(get, set)]
     pub depth_vals: Vec<f64>,
+    #[pyo3(get, set)]
     pub time_vals: Vec<f64>,
+    #[pyo3(get, set)]
     pub ray_param: f64,
+    #[pyo3(get, set)]
     pub ray_iter: usize,
-    pub ray_id: Uuid,
+    #[pyo3(get, set)]
+    pub ray_id: String,
 }
 
 /// Stores data required to initialise rays
@@ -83,6 +91,7 @@ impl Ray {
         init_source: &RayInit,
         prog_config: &ProgConfig,
         ssp: &Ssp,
+        output_dir: &String,
     ) -> Self {
         let mut range_step: f64;
         let mut time_step: f64;
@@ -99,7 +108,7 @@ impl Ray {
             time_vals: vec![0.0; prog_config.max_it + 1],
             ray_param: ang.cos() / ssp.interp_sound_speed(init_source.depth_pos),
             ray_iter: 0,
-            ray_id: Uuid::new_v4(),
+            ray_id: Uuid::new_v4().to_string(),
         };
 
         ray.range_vals[0] = init_source.range_pos;
@@ -144,16 +153,18 @@ impl Ray {
         }
 
         if prog_config.save_to_csv {
-            match ray.write_to_csv() {
+            match ray.write_to_csv(output_dir) {
                 Ok(_) => (),
                 Err(_) => panic!("Ray {:} could not be written to csv", ray.ray_id),
             }
         }
+        ray.depth_vals.truncate(ray.ray_iter + 1);
+        ray.range_vals.truncate(ray.ray_iter + 1);
         ray
     }
 
-    pub fn write_to_csv(&self) -> Result<(), Box<dyn Error>> {
-        let mut wtr = Writer::from_path(format!("{OUTPUT_DIR}/rays/{:}.csv", self.ray_id))?;
+    pub fn write_to_csv(&self, output_dir: &String) -> Result<(), Box<dyn Error>> {
+        let mut wtr = Writer::from_path(format!("{output_dir}/{:}.csv", self.ray_id))?;
         for i in 0..self.ray_iter {
             wtr.write_record(&[
                 self.range_vals[i].to_string(),
@@ -244,7 +255,7 @@ impl Body {
         //     None => return None,
         // };
         let intersection_ans: (f64, f64, usize) = self.check_finite_intersection(ray)?;
-        //TODO Add time interpolation
+        //TODO: Add time interpolation
         // ray.range_vals[ray.ray_iter + 1] = intersection_ans.0;
         // ray.depth_vals[ray.ray_iter + 1] = intersection_ans.1;
         let ray_ang: f64 = (ray.depth_vals[ray.ray_iter + 1] - ray.depth_vals[ray.ray_iter])
@@ -254,7 +265,7 @@ impl Body {
     }
 
     // calculates angle of edge # edge_id
-    //TODO check wrapping
+    //TODO: check wrapping
     fn get_edge_ang(&self, edge_id: usize) -> f64 {
         (self.depth_vals[edge_id + 1] - self.depth_vals[edge_id])
             .atan2(self.range_vals[edge_id + 1] - self.range_vals[edge_id])
@@ -278,7 +289,7 @@ fn intersection_ray_dist_param(
 }
 
 /// Driver function to trace all rays from [`Config`] struct
-pub fn trace_from_config(cfg: Config) -> Vec<Ray> {
+pub fn trace_from_config(cfg: Config, output_dir: String) -> Vec<Ray> {
     let mut init_sources: Vec<RayInit> = vec![];
     for source in cfg.sources {
         init_sources.append(
@@ -290,7 +301,12 @@ pub fn trace_from_config(cfg: Config) -> Vec<Ray> {
     init_sources
         .par_iter()
         .map(|ray_source| {
-            Ray::trace_from_init_source(ray_source, &cfg.prog_config, &cfg.env_config.ssp)
+            Ray::trace_from_init_source(
+                ray_source,
+                &cfg.prog_config,
+                &cfg.env_config.ssp,
+                &output_dir,
+            )
         })
         .collect()
 }
@@ -310,7 +326,7 @@ mod test {
             range_vals: vec![-10.0, 10.0],
             depth_vals: vec![-1.0, 1.0],
             ray_iter: 0,
-            ray_id: Uuid::new_v4(),
+            ray_id: Uuid::new_v4().to_string(),
             ray_param: 1.0,
             time_vals: vec![0.0, 1.0],
         };
@@ -329,7 +345,7 @@ mod test {
             range_vals: vec![-10.0, 10.0],
             depth_vals: vec![-1.0, -1.0],
             ray_iter: 0,
-            ray_id: Uuid::new_v4(),
+            ray_id: Uuid::new_v4().to_string(),
             ray_param: 1.0,
             time_vals: vec![0.0, 1.0],
         };
@@ -349,11 +365,11 @@ mod test {
             range_vals: vec![-10.0, 0.0],
             depth_vals: vec![-1.0, 0.0],
             ray_iter: 0,
-            ray_id: Uuid::new_v4(),
+            ray_id: Uuid::new_v4().to_string(),
             ray_param: 1.0,
             time_vals: vec![0.0, 1.0],
         };
-
+        // TODO: VERIFY THIS
         let ang_out: f64 = test_body.calculate_reflection(&test_ray).unwrap();
         println!("{ang_out}");
     }

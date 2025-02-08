@@ -1,7 +1,12 @@
 [package]
-name = "UnderwaterAcoustics"
+name = "guacs"
 version = "0.1.0"
 edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "guacs"
+crate-type = ["cdylib"]
 
 [dependencies]
 serde = { version = "1.0.216", features = ["derive"] }
@@ -14,3 +19,4 @@ uuid = { version = "1.11.0", features = [
   "macro-diagnostics",
 ] }
 glob = "0.3.1"
+pyo3 = { version = "0.23.3", features = ["extension-module"] }
