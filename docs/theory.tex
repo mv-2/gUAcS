@@ -153,12 +153,28 @@ Now split into equations for $x$ and $y$.
 Equation \ref{eq:edge_dist} can be used to directly calculate $\tau$ and by extension $t$ can then be calculated from Equation \ref{eq:ray_dist}. Note that in this form of the equation if both the direction of the edge and the ray is the same such that $\Delta r_{edge} = k\cdot\Delta r_{ray}$ and $\Delta z_{edge} = k\cdot\Delta z_{ray}$ for $k\in\mathbb{R}$ then the denominator of this equations tends to $0$ resulting in an undefined result. This makes intuitive sense as there should be no solution for parallel lines having a point of intersection. As stated above the calculated intersection is valid if and only if $t\geq0$ and $\tau\in[0, 1]$. 
 
 \subsubsection{Reflection Angle}
+Reflection angle off an object can be simply calculated by noting that the angle of the outgoing ray relative to the object surface is equivalent to that of the incoming ray to the object surface. Inspecting the phenomena shown in Figure \ref{fig:reflect_diagram} allows the relationship in equation \ref{eq:ref_ang} to be derived.
+\begin{figure}[H]
+  \centering
+  \input{reflect_diagram.tikz.tex}
+  \caption{Reflection of ray on solid surface}
+  \label{fig:reflect_diagram}
+\end{figure}
+\begin{align*}
+  \theta_1 &= \theta_2 \\
+  \implies \theta_{incoming} + \theta_{surface} &= \theta_{outgoing} - \theta_{surface}\\   
+\end{align*}
+\begin{equation}
+  \label{eq:ref_ang}
+  \theta_{outgoing} = \theta_{incoming} + 2\cdot\theta_{surface}
+\end{equation}
 
 \section{General Functions}
 \subsection{Sound Speed Profile Representation}
 The sound speed profile is treated as range invariant in the current \texttt{gUAcS} package. The profile is expressed as the knots, coefficients and degree of a B-spline within the configuration files for the program. This requires the B-spline to be evaluated at each depth point for the program. To do so De Boor's Algorithm is implemented where; $\{c_{i}\}$ is the set of spline coefficients, $\{t_{i}\}$ is the set of spline knots and $p$ is the order of the spline. The algorithm is shown below in Algorithm \ref{alg:deboor}.
 \begin{algorithm}[H]
-  \caption{De Boor's Algorithm}\label{alg:deboor}
+  \caption{De Boor's Algorithm}
+  \label{alg:deboor}
   \begin{algorithmic}
     \Initialise{$x$}
     \State $k\gets i$ for which $i$ satisfies $t_{i} > x$ and $t_{i-1} \leq x$

@@ -1,4 +1,4 @@
-use crate::interface::{Config, ProgConfig, SourceConfig};
+use crate::interface::{Config, EnvConfig, ProgConfig, SourceConfig};
 use crate::math_util::deboor_alg;
 use core::f64;
 use csv::Writer;
@@ -90,6 +90,7 @@ impl Ray {
     pub fn trace_from_init_source(
         init_source: &RayInit,
         prog_config: &ProgConfig,
+        env_config: &EnvConfig,
         ssp: &Ssp,
         output_dir: &String,
     ) -> Self {
@@ -118,7 +119,7 @@ impl Ray {
         c_i = ssp.interp_sound_speed(ray.depth_vals[0]);
         c_i1 = ssp.interp_sound_speed(ray.depth_vals[0] + depth_dir * prog_config.depth_step);
 
-        while (ray.ray_iter < prog_config.max_it - init_source.init_iter)
+        'main_loop: while (ray.ray_iter < prog_config.max_it - init_source.init_iter)
             && (ray.range_vals[ray.ray_iter].abs() < prog_config.max_range)
         {
             g_i = (c_i1 - c_i) / prog_config.depth_step;
@@ -146,9 +147,18 @@ impl Ray {
             c_i1 = ssp.interp_sound_speed(
                 ray.depth_vals[ray.ray_iter + 1] + depth_dir * prog_config.depth_step,
             );
+            // Check for any intersections with body objects
             ray.range_vals[ray.ray_iter + 1] =
                 ray.range_vals[ray.ray_iter] + range_dir * range_step;
             ray.time_vals[ray.ray_iter + 1] = ray.time_vals[ray.ray_iter] + time_step;
+            match env_config.check_all_body_intersections(&ray) {
+                Some(ans) => {
+                    ray.range_vals[ray.ray_iter] = ans.0;
+                    ray.depth_vals[ray.ray_iter] = ans.1;
+                    break 'main_loop;
+                }
+                None => 1 + 1,
+            };
             ray.ray_iter += 1;
         }
 
@@ -180,13 +190,14 @@ impl Body {
     /// Checks for intersection between ['Ray'] and ['Body'] self struct over current ray
     /// interation step
     pub fn check_finite_intersection(&self, ray: &Ray) -> Option<(f64, f64, usize)> {
-        let mut ray_dist_vals: Vec<Option<f64>> = vec![None; self.range_vals.len() - 1];
         let mut edge_dist: f64;
-        let ray_range_step: f64 = ray.range_vals[ray.ray_iter + 1] - ray.range_vals[ray.ray_iter];
-        let ray_depth_step: f64 = ray.depth_vals[ray.ray_iter + 1] - ray.depth_vals[ray.ray_iter];
         let mut edge_depth_step: f64;
         let mut edge_range_step: f64;
-        let edge_range: RangeInclusive<f64> = RangeInclusive::new(0.0, 1.0);
+        let mut ray_dist_vals: Vec<Option<f64>> = vec![None; self.range_vals.len() - 1];
+        let ray_range_step: f64 = ray.range_vals[ray.ray_iter + 1] - ray.range_vals[ray.ray_iter];
+        let ray_depth_step: f64 = ray.depth_vals[ray.ray_iter + 1] - ray.depth_vals[ray.ray_iter];
+        // Define valid ranges for solution parameters as defined in theory document
+        let edge_param_range: RangeInclusive<f64> = RangeInclusive::new(0.0, 1.0);
         // iterate over each edge in polygon to find valid intersections
         for i in 0..(self.range_vals.len() - 1) {
             edge_depth_step = self.depth_vals[i + 1] - self.depth_vals[i];
@@ -197,9 +208,10 @@ impl Body {
                     - (self.depth_vals[i] - ray.depth_vals[ray.ray_iter]) * ray_range_step)
                     / ((self.depth_vals[i + 1] - self.depth_vals[i]) * ray_range_step
                         - (self.range_vals[i + 1] - self.range_vals[i]) * ray_depth_step);
-                // check if edge distance parameter is valid
-                if edge_range.contains(&edge_dist) {
-                    ray_dist_vals[i] = match ray_range_step >= 0.0 {
+                // check if edge distance parameter is in valid range
+                if edge_param_range.contains(&edge_dist) {
+                    // ensure that solution is defined without zero denominator
+                    ray_dist_vals[i] = match ray_range_step != 0.0 {
                         true => intersection_ray_dist_param(
                             edge_dist,
                             edge_range_step,
@@ -218,42 +230,33 @@ impl Body {
                 }
             }
         }
-        // Check if there are any valid intersections calculated
-        if !ray_dist_vals
+        // convert options to numeric results
+        let ray_dists_numeric: Vec<f64> = ray_dist_vals
             .iter()
-            .filter(|&x| !x.is_none())
-            .collect::<Vec<&Option<f64>>>()
-            .is_empty()
-        {
-            let ray_dists_numeric: Vec<f64> = ray_dist_vals
-                .iter()
-                .map(|&x| x.unwrap_or(f64::INFINITY))
-                .collect();
-            // Using direct unwrap here as None values should not be present in this and a minimum
-            // value should always exist
-            let edge_id: usize = ray_dists_numeric
-                .iter()
-                .enumerate()
-                .min_by(|(_, a), (_, b)| a.total_cmp(b))
-                .map(|(id, _)| id)
-                .expect(
-                    "There is no minimum distance when calculating intersection for {ray.ray_id}",
-                );
-            Some((
-                ray.range_vals[ray.ray_iter] + ray_dists_numeric[edge_id] * ray_range_step,
-                ray.depth_vals[ray.ray_iter] + ray_dists_numeric[edge_id] * ray_depth_step,
-                edge_id,
-            ))
-        } else {
-            None
+            .map(|&x| x.unwrap_or(f64::INFINITY))
+            .collect();
+        // calculate minimum distance
+        let edge_id: Option<usize> = ray_dists_numeric
+            .iter()
+            .enumerate()
+            .min_by(|(_, a), (_, b)| a.total_cmp(b))
+            .map(|(id, _)| id);
+        // Check if valid minimiser id exists
+        match edge_id {
+            // if valid minimiser exists then check if hit distance is valid otherwise return None
+            Some(id) => match edge_param_range.contains(&ray_dists_numeric[id]) {
+                true => Some((
+                    ray.range_vals[ray.ray_iter] + ray_dists_numeric[id] * ray_range_step,
+                    ray.depth_vals[ray.ray_iter] + ray_dists_numeric[id] * ray_depth_step,
+                    id,
+                )),
+                false => None,
+            },
+            None => None,
         }
     }
 
     pub fn calculate_reflection(&self, ray: &Ray) -> Option<f64> {
-        // let intersection_ans: (f64, f64, usize) = match self.check_finite_intersection(ray) {
-        //     Some(ans) => ans,
-        //     None => return None,
-        // };
         let intersection_ans: (f64, f64, usize) = self.check_finite_intersection(ray)?;
         //TODO: Add time interpolation
         // ray.range_vals[ray.ray_iter + 1] = intersection_ans.0;
@@ -304,6 +307,7 @@ pub fn trace_from_config(cfg: Config, output_dir: String) -> Vec<Ray> {
             Ray::trace_from_init_source(
                 ray_source,
                 &cfg.prog_config,
+                &cfg.env_config,
                 &cfg.env_config.ssp,
                 &output_dir,
             )
@@ -331,6 +335,7 @@ mod test {
             time_vals: vec![0.0, 1.0],
         };
         let ans: (f64, f64, usize) = test_body.check_finite_intersection(&test_ray).unwrap();
+        println!("AAA\n{:#?}", ans);
         assert!(ans.2 == 3);
         assert!((ans.1 + 1.0 - 9.0 / 10.0).abs() < 1e-8);
         assert!((ans.0 + 1.0).abs() < 1e-8);
@@ -350,6 +355,41 @@ mod test {
             time_vals: vec![0.0, 1.0],
         };
         let ans: Option<(f64, f64, usize)> = test_body.check_finite_intersection(&test_ray);
+        assert!(ans.is_none());
+
+        // test 3 failure by angle
+        let test_body: Body = Body {
+            range_vals: vec![-1.0, 1.0, 1.0, -1.0, -1.0],
+            depth_vals: vec![-1.0, -1.0, 1.0, 1.0, -1.0],
+        };
+
+        let test_ray: Ray = Ray {
+            range_vals: vec![-10.0, 1.0],
+            depth_vals: vec![-1.0, -120.0],
+            ray_iter: 0,
+            ray_id: Uuid::new_v4().to_string(),
+            ray_param: 1.0,
+            time_vals: vec![0.0, 1.0],
+        };
+        let ans: Option<(f64, f64, usize)> = test_body.check_finite_intersection(&test_ray);
+        assert!(ans.is_none());
+
+        // test 4 failure by short
+        let test_body: Body = Body {
+            range_vals: vec![-1.0, 1.0, 1.0, -1.0, -1.0],
+            depth_vals: vec![-1.0, -1.0, 1.0, 1.0, -1.0],
+        };
+
+        let test_ray: Ray = Ray {
+            range_vals: vec![-10.0, -5.0],
+            depth_vals: vec![-1.0, -0.5],
+            ray_iter: 0,
+            ray_id: Uuid::new_v4().to_string(),
+            ray_param: 1.0,
+            time_vals: vec![0.0, 1.0],
+        };
+        let ans: Option<(f64, f64, usize)> = test_body.check_finite_intersection(&test_ray);
+        println!("BBB\n{:#?}", ans);
         assert!(ans.is_none());
     }
 

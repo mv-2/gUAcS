@@ -36,7 +36,15 @@ if __name__ == "__main__":
         Body(
             range_vals=[20000.0, 20100.0, 20100.0, 20000.0, 20000.0],
             depth_vals=[1300.0, 1300.0, 1310.0, 1310.0, 1300.0],
-        )
+        ),
+        Body(
+            range_vals=[0.0, 200000.0, 200000.0, 0.0, 0.0],
+            depth_vals=[5000.0, 5000.0, 5100.0, 5100.0, 5000.0],
+        ),
+        Body(
+            range_vals=[0.0, 200000.0, 200000.0, 0.0, 0.0],
+            depth_vals=[0.0, 0.0, -1.0, -1.0, 0.0],
+        ),
     ]
 
     halfspaces = [
@@ -63,7 +71,7 @@ if __name__ == "__main__":
     )
 
     prog_config = ProgConfig(
-        max_it=int(1e5), depth_step=1.0, save_to_csv=True, max_range=2e5
+        max_it=int(1e5), depth_step=1.0, save_to_csv=False, max_range=2e5
     )
 
     config = Config(prog_config=prog_config, env_config=env_config, sources=sources)
