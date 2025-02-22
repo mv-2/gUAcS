@@ -144,9 +144,6 @@ impl Ray {
                         .ln()
                     / g_i.abs();
             }
-            c_i1 = ssp.interp_sound_speed(
-                ray.depth_vals[ray.ray_iter + 1] + depth_dir * prog_config.depth_step,
-            );
             // Check for any intersections with body objects
             ray.range_vals[ray.ray_iter + 1] =
                 ray.range_vals[ray.ray_iter] + range_dir * range_step;
@@ -159,6 +156,10 @@ impl Ray {
                 }
                 None => 1 + 1,
             };
+            // assign next ssp value
+            c_i1 = ssp.interp_sound_speed(
+                ray.depth_vals[ray.ray_iter + 1] + depth_dir * prog_config.depth_step,
+            );
             ray.ray_iter += 1;
         }
 
@@ -189,6 +190,10 @@ impl Ray {
 impl Body {
     /// Checks for intersection between ['Ray'] and ['Body'] self struct over current ray
     /// interation step
+    ///
+    /// TODO: Come back to this and see if logic can be compressed because this is too long for its
+    /// functionality at this point
+    #[allow(clippy::needless_range_loop)]
     pub fn check_finite_intersection(&self, ray: &Ray) -> Option<(f64, f64, usize)> {
         let mut edge_dist: f64;
         let mut edge_depth_step: f64;

@@ -26,8 +26,8 @@ if __name__ == "__main__":
         SourceConfig(
             range_pos=0.0,
             depth_pos=1000.0,
-            ray_fan_limits=(-0.1, 0.1),
-            n_rays=2,
+            ray_fan_limits=(-0.3, 0.3),
+            n_rays=100,
             source_level=150,
         )
     ]
@@ -58,7 +58,9 @@ if __name__ == "__main__":
         )
     ]
 
-    munk_depths = range(0, 5000, 10)
+    max_depth = 5000
+    depth_step = 10
+    munk_depths = range(-2 * depth_step, max_depth + 3 * depth_step, depth_step)
     munk_vals = [munk_profile(z) for z in munk_depths]
 
     (ssp_knots, ssp_coefs, ssp_degree) = splrep(munk_depths, munk_vals, k=3)
