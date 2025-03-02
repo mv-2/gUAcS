@@ -9,6 +9,9 @@ use std::error::Error;
 use std::ops::RangeInclusive;
 use uuid::Uuid;
 
+// NUCLEAR OPTION FOR REFLECTION CALCULATION
+const REFECT_OFFSET: f64 = 0.1;
+
 /// Stores data on body geometry
 #[derive(Deserialize, Debug)]
 pub struct Body {
@@ -78,10 +81,40 @@ pub struct Ssp {
     ssp_degree: usize,
 }
 
+struct IntersectLoc {
+    range: f64,
+    depth: f64,
+    edge_id: usize,
+}
+
+struct ReflectResult {
+    range: f64,
+    depth: f64,
+    ang: f64,
+}
+
 impl Ssp {
     /// Calculate sound speed value at given depth
     pub fn interp_sound_speed(&self, depth: f64) -> f64 {
         deboor_alg(depth, &self.ssp_knots, &self.ssp_coefs, self.ssp_degree)
+    }
+}
+
+impl EnvConfig {
+    fn check_all_body_reflections(&self, ray: &Ray) -> Option<ReflectResult> {
+        // let mut temp_ans: Option<(f64, f64, usize)>;
+        // I would love to directly iterate body values but unfortunately borrow checker is whiny
+        for i in 0..self.bodies.len() {
+            match self.bodies[i].calculate_reflection(ray) {
+                Some(ans) => return Some(ans),
+                None => 1,
+            };
+            // temp_ans = self.bodies[i].check_finite_intersection(ray);
+            // if temp_ans.is_some() {
+            // return temp_ans;
+            // }
+        }
+        None
     }
 }
 
@@ -101,7 +134,7 @@ impl Ray {
         let mut g_i: f64;
         let ang: f64 = init_source.init_ang;
         let mut depth_dir: f64 = ang.sin().signum();
-        let range_dir: f64 = ang.cos().signum();
+        let mut range_dir: f64 = ang.cos().signum();
 
         let mut ray: Ray = Ray {
             range_vals: vec![0.0; prog_config.max_it + 1],
@@ -119,18 +152,18 @@ impl Ray {
         c_i = ssp.interp_sound_speed(ray.depth_vals[0]);
         c_i1 = ssp.interp_sound_speed(ray.depth_vals[0] + depth_dir * prog_config.depth_step);
 
-        'main_loop: while (ray.ray_iter < prog_config.max_it - init_source.init_iter)
+        while (ray.ray_iter < prog_config.max_it - init_source.init_iter)
             && (ray.range_vals[ray.ray_iter].abs() < prog_config.max_range)
         {
             g_i = (c_i1 - c_i) / prog_config.depth_step;
             if ray.ray_param * c_i1 < 1.0 {
-                range_step = ((1.0 - (ray.ray_param * c_i).powi(2)).sqrt()
+                range_step = (((1.0 - (ray.ray_param * c_i).powi(2)).sqrt()
                     - (1.0 - (ray.ray_param * c_i1).powi(2)).sqrt())
-                    / (ray.ray_param * g_i);
+                    / (ray.ray_param * g_i));
                 time_step = ((c_i1 / c_i) * (1.0 + (1.0 - (ray.ray_param * c_i).powi(2)).sqrt())
                     / (1.0 + (1.0 - (ray.ray_param * c_i1).powi(2)).sqrt()))
                 .ln()
-                    / g_i.abs();
+                    / g_i;
                 ray.depth_vals[ray.ray_iter + 1] =
                     ray.depth_vals[ray.ray_iter] + depth_dir * prog_config.depth_step;
                 c_i = c_i1;
@@ -144,18 +177,24 @@ impl Ray {
                         .ln()
                     / g_i.abs();
             }
-            // Check for any intersections with body objects
+            // Update range
             ray.range_vals[ray.ray_iter + 1] =
                 ray.range_vals[ray.ray_iter] + range_dir * range_step;
             ray.time_vals[ray.ray_iter + 1] = ray.time_vals[ray.ray_iter] + time_step;
-            match env_config.check_all_body_intersections(&ray) {
-                Some(ans) => {
-                    ray.range_vals[ray.ray_iter] = ans.0;
-                    ray.depth_vals[ray.ray_iter] = ans.1;
-                    break 'main_loop;
-                }
-                None => 1 + 1,
-            };
+            // Check if any intersections occur and if any valid solutions exist then ray
+            // parameters will be reassigned
+            if let Some(ans) = env_config.check_all_body_reflections(&ray) {
+                ray.range_vals[ray.ray_iter + 1] = ans.range;
+                ray.depth_vals[ray.ray_iter + 1] = ans.depth;
+                ray.ray_param = ans.ang.cos() / ssp.interp_sound_speed(ans.depth); // TODO: Check if this makes any major
+                                                                                   // difference of if extra interpolation can be afforded
+                depth_dir = ans.ang.sin().signum();
+                range_dir = ans.ang.cos().signum();
+                ray.ray_iter += 1;
+                ray.range_vals[ray.ray_iter + 1] = ans.range + REFECT_OFFSET * ans.ang.cos();
+                ray.depth_vals[ray.ray_iter + 1] = ans.depth + REFECT_OFFSET * ans.ang.sin();
+                c_i = ssp.interp_sound_speed(ans.depth);
+            }
             // assign next ssp value
             c_i1 = ssp.interp_sound_speed(
                 ray.depth_vals[ray.ray_iter + 1] + depth_dir * prog_config.depth_step,
@@ -194,7 +233,7 @@ impl Body {
     /// TODO: Come back to this and see if logic can be compressed because this is too long for its
     /// functionality at this point
     #[allow(clippy::needless_range_loop)]
-    pub fn check_finite_intersection(&self, ray: &Ray) -> Option<(f64, f64, usize)> {
+    fn check_finite_intersection(&self, ray: &Ray) -> Option<IntersectLoc> {
         let mut edge_dist: f64;
         let mut edge_depth_step: f64;
         let mut edge_range_step: f64;
@@ -250,33 +289,44 @@ impl Body {
         match edge_id {
             // if valid minimiser exists then check if hit distance is valid otherwise return None
             Some(id) => match edge_param_range.contains(&ray_dists_numeric[id]) {
-                true => Some((
-                    ray.range_vals[ray.ray_iter] + ray_dists_numeric[id] * ray_range_step,
-                    ray.depth_vals[ray.ray_iter] + ray_dists_numeric[id] * ray_depth_step,
-                    id,
-                )),
+                true => Some(IntersectLoc {
+                    range: ray.range_vals[ray.ray_iter] + ray_dists_numeric[id] * ray_range_step,
+                    depth: ray.depth_vals[ray.ray_iter] + ray_dists_numeric[id] * ray_depth_step,
+                    edge_id: id,
+                }),
                 false => None,
             },
             None => None,
         }
     }
 
-    pub fn calculate_reflection(&self, ray: &Ray) -> Option<f64> {
-        let intersection_ans: (f64, f64, usize) = self.check_finite_intersection(ray)?;
+    fn calculate_reflection(&self, ray: &Ray) -> Option<ReflectResult> {
+        let intersection_ans: IntersectLoc = self.check_finite_intersection(ray)?;
         //TODO: Add time interpolation
-        // ray.range_vals[ray.ray_iter + 1] = intersection_ans.0;
-        // ray.depth_vals[ray.ray_iter + 1] = intersection_ans.1;
         let ray_ang: f64 = (ray.depth_vals[ray.ray_iter + 1] - ray.depth_vals[ray.ray_iter])
             .atan2(ray.range_vals[ray.ray_iter + 1] - ray.range_vals[ray.ray_iter]);
-        let side_ang: f64 = self.get_edge_ang(intersection_ans.2);
-        Some(ray_ang + 2.0 * side_ang)
+        let side_ang: f64 = self.get_edge_ang(intersection_ans.edge_id);
+        let new_ang: f64 = 2.0 * side_ang - ray_ang;
+        Some(ReflectResult {
+            range: intersection_ans.range,
+            depth: intersection_ans.depth,
+            ang: new_ang,
+        })
     }
 
     // calculates angle of edge # edge_id
     //TODO: check wrapping
+    // Change this to eval on compile then use this function as a lookup for increased
+    // performance??
     fn get_edge_ang(&self, edge_id: usize) -> f64 {
-        (self.depth_vals[edge_id + 1] - self.depth_vals[edge_id])
+        let mut ang: f64 = (self.depth_vals[edge_id + 1] - self.depth_vals[edge_id])
             .atan2(self.range_vals[edge_id + 1] - self.range_vals[edge_id])
+            % f64::consts::PI;
+        ang = (ang + f64::consts::PI) % f64::consts::PI;
+        match ang > f64::consts::PI / 2.0 {
+            true => ang - f64::consts::PI,
+            false => ang,
+        }
     }
 }
 
@@ -339,11 +389,10 @@ mod test {
             ray_param: 1.0,
             time_vals: vec![0.0, 1.0],
         };
-        let ans: (f64, f64, usize) = test_body.check_finite_intersection(&test_ray).unwrap();
-        println!("AAA\n{:#?}", ans);
-        assert!(ans.2 == 3);
-        assert!((ans.1 + 1.0 - 9.0 / 10.0).abs() < 1e-8);
-        assert!((ans.0 + 1.0).abs() < 1e-8);
+        let ans: IntersectLoc = test_body.check_finite_intersection(&test_ray).unwrap();
+        assert!(ans.edge_id == 3);
+        assert!((ans.range + 1.0 - 9.0 / 10.0).abs() < 1e-8);
+        assert!((ans.depth + 1.0).abs() < 1e-8);
 
         // test 2 parrallel line failure
         let test_body: Body = Body {
@@ -359,7 +408,7 @@ mod test {
             ray_param: 1.0,
             time_vals: vec![0.0, 1.0],
         };
-        let ans: Option<(f64, f64, usize)> = test_body.check_finite_intersection(&test_ray);
+        let ans: Option<IntersectLoc> = test_body.check_finite_intersection(&test_ray);
         assert!(ans.is_none());
 
         // test 3 failure by angle
@@ -376,7 +425,7 @@ mod test {
             ray_param: 1.0,
             time_vals: vec![0.0, 1.0],
         };
-        let ans: Option<(f64, f64, usize)> = test_body.check_finite_intersection(&test_ray);
+        let ans: Option<IntersectLoc> = test_body.check_finite_intersection(&test_ray);
         assert!(ans.is_none());
 
         // test 4 failure by short
@@ -393,8 +442,7 @@ mod test {
             ray_param: 1.0,
             time_vals: vec![0.0, 1.0],
         };
-        let ans: Option<(f64, f64, usize)> = test_body.check_finite_intersection(&test_ray);
-        println!("BBB\n{:#?}", ans);
+        let ans: Option<IntersectLoc> = test_body.check_finite_intersection(&test_ray);
         assert!(ans.is_none());
     }
 
@@ -415,7 +463,7 @@ mod test {
             time_vals: vec![0.0, 1.0],
         };
         // TODO: VERIFY THIS
-        let ang_out: f64 = test_body.calculate_reflection(&test_ray).unwrap();
-        println!("{ang_out}");
+        let ang_out: ReflectResult = test_body.calculate_reflection(&test_ray).unwrap();
+        println!("{:}", ang_out.ang);
     }
 }

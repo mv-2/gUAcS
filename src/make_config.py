@@ -26,8 +26,8 @@ if __name__ == "__main__":
         SourceConfig(
             range_pos=0.0,
             depth_pos=1000.0,
-            ray_fan_limits=(-0.3, 0.3),
-            n_rays=100,
+            ray_fan_limits=(-0.2, 0.2),
+            n_rays=200,
             source_level=150,
         )
     ]

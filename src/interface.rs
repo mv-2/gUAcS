@@ -1,4 +1,4 @@
-use crate::path_tracing::{Body, HalfSpace, Ray, Ssp};
+use crate::path_tracing::{Body, HalfSpace, Ssp};
 use serde::Deserialize;
 use std::fs::File;
 
@@ -40,24 +40,6 @@ pub struct SourceConfig {
     pub ray_fan_limits: [f64; 2],
     pub n_rays: usize,
     pub source_level: f64,
-}
-
-impl EnvConfig {
-    pub fn check_all_body_intersections(&self, ray: &Ray) -> Option<(f64, f64, usize)> {
-        // let mut temp_ans: Option<(f64, f64, usize)>;
-        // I would love to directly iterate body values but unfortunately borrow checker is whiny
-        for i in 0..self.bodies.len() {
-            match self.bodies[i].check_finite_intersection(ray) {
-                Some(ans) => return Some(ans),
-                None => 1,
-            };
-            // temp_ans = self.bodies[i].check_finite_intersection(ray);
-            // if temp_ans.is_some() {
-            // return temp_ans;
-            // }
-        }
-        None
-    }
 }
 
 impl Config {
