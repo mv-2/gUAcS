@@ -47,7 +47,9 @@ def plot_rays(rays: list):
         ax_rays.fill([rv / 1000 for rv in bd.range_vals], bd.depth_vals, c="r")
 
     for ray in rays:
-        ax_rays.plot(np.array(ray.range_vals) / 1000, ray.depth_vals, c="k")
+        ax_rays.plot(
+            np.array(ray.range_vals) / 1000, ray.depth_vals, c="k", linewidth=0.5
+        )
 
     plt.show()
 
