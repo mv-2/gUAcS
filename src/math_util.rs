@@ -56,7 +56,8 @@ mod tests {
             .collect::<Vec<f64>>();
         // println!("{:#?}", calc_vals);
         for (i, &val) in calc_vals.iter().enumerate() {
-            assert!((val - VALS[i]).abs() < 0.0001);
+            println!("{val}, {:}", VALS[i]);
+            assert!((val - VALS[i]).abs() < 1e-8);
         }
     }
 }

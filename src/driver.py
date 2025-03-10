@@ -1,12 +1,26 @@
-from guacs import run_sim
+from guacs import (
+    run_sim,
+    Config,
+    ProgConfig,
+    EnvConfig,
+    SourceConfig,
+    Body,
+    HalfSpace,
+    Ssp,
+)
 import numpy as np
-from python_interface_tools import Body
-from scipy.interpolate import splev
-import json
+from scipy.interpolate import splev, splrep
 import matplotlib.pyplot as plt
 
 CONFIG_PATH = "configs/run_config.json"
-OUTPUT_PATH = "output_data"
+OUTPUT_PATH = "rays"
+
+
+def munk_profile(depth: float) -> float:
+    return 1500.0 * (
+        1.0
+        + 0.00737 * (2 * (depth - 1300) / 1500 - 1 + np.exp(-2 * (depth - 1300) / 1500))
+    )
 
 
 def fix_rays(raw_rays: list) -> list:
@@ -17,15 +31,12 @@ def fix_rays(raw_rays: list) -> list:
     return raw_rays
 
 
-def plot_rays(rays: list):
-    cfg_file = json.load(open("configs/run_config.json"))
-    bodies = []
-    for bd in cfg_file["env_config"]["bodies"]:
-        bodies += [Body(**bd)]
-    ssp = cfg_file["env_config"]["ssp"]
-    knots = ssp["ssp_knots"]
-    coefs = ssp["ssp_coefs"]
-    degree = ssp["ssp_degree"]
+def plot_rays(cfg_file: Config, rays: list):
+    bodies = cfg_file.env_config.bodies
+    ssp = cfg_file.env_config.ssp
+    knots = ssp.ssp_knots
+    coefs = ssp.ssp_coefs
+    degree = ssp.ssp_degree
     tck = (knots, coefs, degree)
     depth_range = list(range(0, 5000))
     c_profile = [splev(depth, tck, der=0) for depth in depth_range]
@@ -55,6 +66,61 @@ def plot_rays(rays: list):
 
 
 if __name__ == "__main__":
-    rays = run_sim(CONFIG_PATH, OUTPUT_PATH)
+    sources = [
+        SourceConfig(
+            range_pos=0.0,
+            depth_pos=1000.0,
+            ray_fan_limits=(-0.2, 0.2),
+            n_rays=100,
+            source_level=150,
+        )
+    ]
+
+    bodies = [
+        Body(
+            range_vals=[20000.0, 20100.0, 20100.0, 20000.0, 20000.0],
+            depth_vals=[1300.0, 1300.0, 1310.0, 1310.0, 1300.0],
+        ),
+        Body(
+            range_vals=[0.0, 200000.0, 200000.0, 0.0, 0.0],
+            depth_vals=[5000.0, 5000.0, 5100.0, 5100.0, 5000.0],
+        ),
+        Body(
+            range_vals=[0.0, 200000.0, 200000.0, 0.0, 0.0],
+            depth_vals=[0.0, 0.0, -1.0, -1.0, 0.0],
+        ),
+    ]
+
+    halfspaces = [
+        HalfSpace(
+            body=Body(
+                range_vals=[0.0, 100000.0, 100000.0, 0.0, 0.0],
+                depth_vals=[5000.0, 5000.0, 5100.0, 5100.0, 5000.0],
+            ),
+            sound_speed=1600.0,
+            density=1.5,
+        )
+    ]
+
+    max_depth = 5000
+    depth_step = 100
+    munk_depths = range(-2 * depth_step, max_depth + 3 * depth_step, depth_step)
+    munk_vals = [munk_profile(z) for z in munk_depths]
+
+    (ssp_knots, ssp_coefs, ssp_degree) = splrep(munk_depths, munk_vals, k=3)
+
+    env_config = EnvConfig(
+        bodies=bodies,
+        ssp=Ssp(ssp_knots=ssp_knots, ssp_coefs=ssp_coefs, ssp_degree=ssp_degree),
+        swell_height=0.0,
+        halfspaces=halfspaces,
+    )
+
+    prog_config = ProgConfig(
+        max_it=int(1e5), depth_step=1.0, save_to_csv=False, max_range=2e5
+    )
+
+    config = Config(prog_config=prog_config, env_config=env_config, sources=sources)
+    rays = run_sim(config, OUTPUT_PATH)
     rays = fix_rays(rays)
-    plot_rays(rays)
+    plot_rays(config, rays)

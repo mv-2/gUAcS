@@ -6,7 +6,6 @@ use pyo3::prelude::*;
 use rayon::prelude::*;
 use serde::Deserialize;
 use std::error::Error;
-use std::mem::swap;
 use std::ops::RangeInclusive;
 use uuid::Uuid;
 
@@ -14,20 +13,27 @@ use uuid::Uuid;
 const REFLECT_OFFSET: f64 = 0.1;
 
 /// Stores data on body geometry
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
+#[pyclass]
 pub struct Body {
     // polygonal definition only
-    range_vals: Vec<f64>,
-    depth_vals: Vec<f64>,
+    #[pyo3(get, set)]
+    pub range_vals: Vec<f64>,
+    #[pyo3(get, set)]
+    pub depth_vals: Vec<f64>,
     // TODO: bounding box values to be added as later optimisation
 }
 
 /// Stores halfspace geometry and physical property data
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
+#[pyclass]
 pub struct HalfSpace {
-    body: Body,
-    sound_speed: f64,
-    density: f64,
+    #[pyo3(get, set)]
+    pub body: Body,
+    #[pyo3(get, set)]
+    pub sound_speed: f64,
+    #[pyo3(get, set)]
+    pub density: f64,
 }
 
 /// Stores Ray propagation data
@@ -77,11 +83,15 @@ impl RayInit {
 }
 
 /// Stores sound speed profile data
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
+#[pyclass]
 pub struct Ssp {
-    ssp_knots: Vec<f64>,
-    ssp_coefs: Vec<f64>,
-    ssp_degree: usize,
+    #[pyo3(get, set)]
+    pub ssp_knots: Vec<f64>,
+    #[pyo3(get, set)]
+    pub ssp_coefs: Vec<f64>,
+    #[pyo3(get, set)]
+    pub ssp_degree: usize,
 }
 
 struct IntersectLoc {
@@ -206,6 +216,7 @@ impl Ray {
             // Check if any intersections occur and if any valid solutions exist then ray
             // parameters will be reassigned
             if let Some(ans) = env_config.check_all_body_reflections(&ray) {
+                println!("Ray {:}, init angle {:}", ray.ray_id, init_source.init_ang);
                 // set next ray location to intersection location
                 ray.range_vals[ray.ray_iter + 1] = ans.range;
                 ray.depth_vals[ray.ray_iter + 1] = ans.depth;
