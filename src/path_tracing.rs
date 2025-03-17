@@ -122,10 +122,6 @@ impl EnvConfig {
                 Some(ans) => return Some(ans),
                 None => 1,
             };
-            // temp_ans = self.bodies[i].check_finite_intersection(ray);
-            // if temp_ans.is_some() {
-            // return temp_ans;
-            // }
         }
         None
     }
@@ -201,8 +197,9 @@ impl Ray {
                 // reverse depth direction for turn
                 depth_dir = -depth_dir;
                 // Calculate range and time steps for turning ray
-                range_step =
-                    (2.0 * (1.0 - (ray.ray_param * c_i).powi(2)) / (ray.ray_param * g_i)).abs();
+                range_step = (2.0 * (1.0 - (ray.ray_param * c_i).powi(2)).sqrt()
+                    / (ray.ray_param * g_i))
+                    .abs();
                 time_step = 2.0
                     * ((1.0 + (1.0 - (ray.ray_param * c_i).powi(2)).sqrt())
                         / (ray.ray_param * c_i))
@@ -216,7 +213,6 @@ impl Ray {
             // Check if any intersections occur and if any valid solutions exist then ray
             // parameters will be reassigned
             if let Some(ans) = env_config.check_all_body_reflections(&ray) {
-                println!("Ray {:}, init angle {:}", ray.ray_id, init_source.init_ang);
                 // set next ray location to intersection location
                 ray.range_vals[ray.ray_iter + 1] = ans.range;
                 ray.depth_vals[ray.ray_iter + 1] = ans.depth;

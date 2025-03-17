@@ -1,11 +1,10 @@
-use path_tracing::HalfSpace;
 use pyo3::prelude::*;
 pub mod interface;
 pub mod math_util;
 pub mod path_tracing;
 
 use crate::interface::*;
-use crate::path_tracing::{trace_from_config, Body, Ray, Ssp};
+use crate::path_tracing::{trace_from_config, Body, HalfSpace, Ray, Ssp};
 use glob::glob;
 use std::fs::remove_file;
 
