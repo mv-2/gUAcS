@@ -3,9 +3,6 @@ use pyo3::prelude::*;
 use serde::Deserialize;
 use std::fs::File;
 
-pub const OUTPUT_DIR: &str = "../output_data";
-pub const CONFIG_PATH: &str = "configs";
-
 /// Overall config opject to aid in loading serialized config jsons
 #[derive(Deserialize, Debug, Clone)]
 #[pyclass]
@@ -30,6 +27,8 @@ pub struct ProgConfig {
     pub save_to_csv: bool,
     #[pyo3(get, set)]
     pub max_range: f64,
+    #[pyo3(get, set)]
+    pub output_path: String,
 }
 
 /// Stores environmental constant data for simulation (SSP and density profile information)
@@ -223,12 +222,19 @@ impl EnvConfig {
 #[pymethods]
 impl ProgConfig {
     #[new]
-    fn py_new(depth_step: f64, max_it: usize, save_to_csv: bool, max_range: f64) -> Self {
+    fn py_new(
+        depth_step: f64,
+        max_it: usize,
+        save_to_csv: bool,
+        max_range: f64,
+        output_path: String,
+    ) -> Self {
         ProgConfig {
             depth_step,
             max_it,
             save_to_csv,
             max_range,
+            output_path,
         }
     }
 }

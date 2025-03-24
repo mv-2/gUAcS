@@ -152,7 +152,6 @@ impl Ray {
         prog_config: &ProgConfig,
         env_config: &EnvConfig,
         ssp: &Ssp,
-        output_dir: &String,
     ) -> Self {
         let mut range_step: f64;
         let mut time_step: f64;
@@ -237,7 +236,7 @@ impl Ray {
 
         // save all rays to csv if config requires. NOTE:This is very slow
         if prog_config.save_to_csv {
-            match ray.write_to_csv(output_dir) {
+            match ray.write_to_csv(&prog_config.output_path) {
                 Ok(_) => (),
                 Err(_) => panic!("Ray {:} could not be written to csv", ray.ray_id),
             }
@@ -383,7 +382,7 @@ fn intersection_ray_dist_param(
 }
 
 /// Driver function to trace all rays from [`Config`] struct
-pub fn trace_from_config(cfg: Config, output_dir: String) -> Vec<Ray> {
+pub fn trace_from_config(cfg: Config) -> Vec<Ray> {
     let mut init_sources: Vec<RayInit> = vec![];
     let mut init_sound_speed: f64;
     for source in cfg.sources {
@@ -402,7 +401,6 @@ pub fn trace_from_config(cfg: Config, output_dir: String) -> Vec<Ray> {
                 &cfg.prog_config,
                 &cfg.env_config,
                 &cfg.env_config.ssp,
-                &output_dir,
             )
         })
         .collect()

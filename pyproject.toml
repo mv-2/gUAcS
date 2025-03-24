@@ -6,10 +6,11 @@ build-backend = "maturin"
 name = "guacs"
 requires-python = ">=3.8"
 classifiers = [
-    "Programming Language :: Rust",
-    "Programming Language :: Python :: Implementation :: CPython",
-    "Programming Language :: Python :: Implementation :: PyPy",
+  "Programming Language :: Rust",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
 ]
+dependencies = ["numpy", "scipy", "matplotlib"]
 dynamic = ["version"]
 [tool.maturin]
 features = ["pyo3/extension-module"]

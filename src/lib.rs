@@ -5,21 +5,12 @@ pub mod path_tracing;
 
 use crate::interface::*;
 use crate::path_tracing::{trace_from_config, Body, HalfSpace, Ray, Ssp};
-use glob::glob;
-use std::fs::remove_file;
 
 #[pyfunction]
 #[pyo3(name = "run_sim")]
-fn python_rays(config: Config, output_path: String) -> PyResult<Vec<Ray>> {
-    // TODO: Possibly remove this later on as deleting the users files is suboptimal
-    for path in glob(&format!("{output_path}/*.csv")[..]).expect("Failed to find output_data files")
-    {
-        match path {
-            Ok(path) => remove_file(path).unwrap(),
-            Err(e) => println!("{:?}", e),
-        }
-    }
-    Ok(trace_from_config(config, output_path))
+fn python_rays(config: Config) -> PyResult<Vec<Ray>> {
+    // silly wrapper for python stuff
+    Ok(trace_from_config(config))
 }
 
 #[pymodule]

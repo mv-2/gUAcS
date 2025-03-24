@@ -12,9 +12,6 @@ import numpy as np
 from scipy.interpolate import splev, splrep
 import matplotlib.pyplot as plt
 
-CONFIG_PATH = "configs/run_config.json"
-OUTPUT_PATH = "rays"
-
 
 def munk_profile(depth: float) -> float:
     return 1500.0 * (
@@ -117,10 +114,14 @@ if __name__ == "__main__":
     )
 
     prog_config = ProgConfig(
-        max_it=int(1e5), depth_step=1.0, save_to_csv=False, max_range=2e5
+        max_it=int(1e5),
+        depth_step=1.0,
+        save_to_csv=False,
+        max_range=2e5,
+        output_path="output_data",
     )
 
     config = Config(prog_config=prog_config, env_config=env_config, sources=sources)
-    rays = run_sim(config, OUTPUT_PATH)
+    rays = run_sim(config)
     rays = fix_rays(rays)
     plot_rays(config, rays)
