@@ -28,6 +28,8 @@ pub struct ProgConfig {
     #[pyo3(get, set)]
     pub max_range: f64,
     #[pyo3(get, set)]
+    pub min_range: f64,
+    #[pyo3(get, set)]
     pub output_path: String,
 }
 
@@ -227,6 +229,7 @@ impl ProgConfig {
         max_it: usize,
         save_to_csv: bool,
         max_range: f64,
+        min_range: f64,
         output_path: String,
     ) -> Self {
         ProgConfig {
@@ -234,6 +237,7 @@ impl ProgConfig {
             max_it,
             save_to_csv,
             max_range,
+            min_range,
             output_path,
         }
     }

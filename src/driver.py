@@ -76,7 +76,7 @@ if __name__ == "__main__":
     bodies = [
         Body(
             range_vals=[20000.0, 20100.0, 20100.0, 20000.0, 20000.0],
-            depth_vals=[1300.0, 1300.0, 1310.0, 1310.0, 1300.0],
+            depth_vals=[1400.0, 1400.0, 1310.0, 1310.0, 1400.0],
         ),
         Body(
             range_vals=[0.0, 200000.0, 200000.0, 0.0, 0.0],
@@ -118,6 +118,7 @@ if __name__ == "__main__":
         depth_step=1.0,
         save_to_csv=False,
         max_range=2e5,
+        min_range=-10.0,
         output_path="output_data",
     )
 
