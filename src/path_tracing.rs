@@ -62,11 +62,17 @@ pub struct RayInit {
     init_ang: f64,
     init_iter: usize,
     init_sound_speed: f64,
+    range_lims: RangeInclusive<f64>,
 }
 
 impl RayInit {
     /// Create [`RayInit`] struct from [`SourceConfig`] struct
-    fn from_source(source: &SourceConfig, ray_id: usize, init_sound_speed: f64) -> Self {
+    fn from_source(
+        source: &SourceConfig,
+        ray_id: usize,
+        init_sound_speed: f64,
+        prog_config: &ProgConfig,
+    ) -> Self {
         let init_ang: f64 = source.ray_fan_limits[0]
             + (ray_id as f64) * (source.ray_fan_limits[1] - source.ray_fan_limits[0])
                 / (source.n_rays as f64 - 1_f64);
@@ -78,6 +84,8 @@ impl RayInit {
             init_ang,
             init_iter: 0_usize,
             init_sound_speed,
+            range_lims: RangeInclusive::new(prog_config.min_range, prog_config.max_range), // TODO:
+                                                                                           // Initialise this elsewhere
         }
     }
 }
@@ -160,13 +168,15 @@ impl Ray {
         let mut g_i: f64;
         let ang: f64 = init_source.init_ang;
         let mut depth_dir: f64 = ang.sin().signum();
-        let mut range_dir: f64 = ang.cos().signum();
+        // let mut range_dir: f64 = ang.cos().signum();
         let mut ray: Ray = Ray::init_from_cfgs(init_source, prog_config);
         // set initial sound speed values
         c_i = ssp.interp_sound_speed(ray.depth_vals[0]);
 
         while (ray.ray_iter < prog_config.max_it - init_source.init_iter)
-            && (ray.range_vals[ray.ray_iter].abs() < prog_config.max_range)
+            && (init_source
+                .range_lims
+                .contains(&ray.range_vals[ray.ray_iter]))
         {
             // set next SSP value
             c_i1 = ssp.interp_sound_speed(
@@ -206,8 +216,8 @@ impl Ray {
                     / g_i.abs();
             }
             // Update range and time from calculated steps
-            ray.range_vals[ray.ray_iter + 1] =
-                ray.range_vals[ray.ray_iter] + range_dir * range_step;
+            ray.range_vals[ray.ray_iter + 1] = ray.range_vals[ray.ray_iter] + range_step;
+            // ray.range_vals[ray.ray_iter] + range_dir * range_step;
             ray.time_vals[ray.ray_iter + 1] = ray.time_vals[ray.ray_iter] + time_step;
             // Check if any intersections occur and if any valid solutions exist then ray
             // parameters will be reassigned
@@ -220,8 +230,8 @@ impl Ray {
                 // recalculate coordinate system direction signs
                 depth_dir = ans.ang.sin().signum(); // TODO: maybe change this to a non-trig
                                                     // function in order to reduce computation
-                range_dir = ans.ang.cos().signum();
-                // step iter value for calculation step taken
+                                                    // range_dir = ans.ang.cos().signum();
+                                                    // step iter value for calculation step taken
                 ray.ray_iter += 1;
                 // set next range and depth vals to minor offset from body to avoid ray getting
                 // caught inside of [`Body`] struct
@@ -389,7 +399,7 @@ pub fn trace_from_config(cfg: Config) -> Vec<Ray> {
         init_sound_speed = cfg.env_config.ssp.interp_sound_speed(source.depth_pos);
         init_sources.append(
             &mut (0..source.n_rays)
-                .map(|i| RayInit::from_source(&source, i, init_sound_speed))
+                .map(|i| RayInit::from_source(&source, i, init_sound_speed, &cfg.prog_config))
                 .collect(),
         );
     }
