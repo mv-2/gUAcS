@@ -268,6 +268,7 @@ impl Ray {
         // truncate vectors to remove any wasted space
         ray.depth_vals.truncate(ray.ray_iter + 1);
         ray.range_vals.truncate(ray.ray_iter + 1);
+        ray.time_vals.truncate(ray.ray_iter + 1);
         ray
     }
 

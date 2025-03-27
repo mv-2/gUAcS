@@ -80,6 +80,9 @@ impl Beam {
         beam.central_ray
             .range_vals
             .truncate(beam.central_ray.ray_iter + 1);
+        beam.central_ray
+            .time_vals
+            .truncate(beam.central_ray.ray_iter + 1);
         beam
     }
 }

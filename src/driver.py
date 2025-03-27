@@ -12,6 +12,7 @@ from guacs import (
 import numpy as np
 from scipy.interpolate import splev, splrep
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 
 
 def munk_profile(depth: float) -> float:
@@ -29,7 +30,8 @@ def fix_rays(raw_rays: list) -> list:
     return raw_rays
 
 
-def plot_rays(cfg_file: Config, rays: list):
+def plot_environment(cfg_file: Config) -> list:
+    fig, ax = plt.subplots(1, 2, sharey=True, gridspec_kw={"width_ratios": [1, 4]})
     bodies = cfg_file.env_config.bodies
     ssp = cfg_file.env_config.ssp
     knots = ssp.ssp_knots
@@ -40,7 +42,6 @@ def plot_rays(cfg_file: Config, rays: list):
     c_profile = [splev(depth, tck, der=0) for depth in depth_range]
     g_profile = [splev(depth, tck, der=1) for depth in depth_range]
 
-    fig, ax = plt.subplots(1, 2, sharey=True, gridspec_kw={"width_ratios": [1, 4]})
     ax_ssp = ax[0]
     ax_ssp.invert_yaxis()
     ax_ssp.set_ylabel("Depth [$m$]")
@@ -54,6 +55,14 @@ def plot_rays(cfg_file: Config, rays: list):
     ax_g.plot(g_profile, depth_range, c="red")
     for bd in bodies:
         ax_rays.fill([rv / 1000 for rv in bd.range_vals], bd.depth_vals, c="r")
+    ax_rays.set_xlim(
+        [cfg_file.prog_config.min_range / 1000, cfg_file.prog_config.max_range / 1000]
+    )
+    return [fig, ax_rays, ax_ssp, ax_g]
+
+
+def plot_rays(cfg_file: Config, rays: list):
+    fig, ax_rays, ax_ssp, ax_g = plot_environment(cfg_file)
 
     for ray in rays:
         ax_rays.plot(
@@ -63,12 +72,46 @@ def plot_rays(cfg_file: Config, rays: list):
     plt.show()
 
 
+def time_interp_rays(rays: list, time_vals: np.array) -> list:
+    for i in range(len(rays)):
+        rays[i].range_vals = np.interp(
+            time_vals, rays[i].time_vals, rays[i].range_vals, right=np.nan
+        )
+        rays[i].depth_vals = np.interp(
+            time_vals, rays[i].time_vals, rays[i].depth_vals, right=np.nan
+        )
+        rays[i].time_vals = time_vals
+    return rays
+
+
+def animate_propagation(cfg_file: Config, rays: list, framerate: float):
+    fig, ax_rays, ax_ssp, ax_g = plot_environment(cfg_file)
+    max_time = np.nanmax([np.nanmax(ray.time_vals) for ray in rays])
+    time_vals = np.arange(0.0, max_time, 1 / framerate)
+    rays = time_interp_rays(rays, time_vals)
+    n_rays = len(rays)
+    lines = [None] * n_rays
+    for i in range(n_rays):
+        (lines[i],) = ax_rays.plot([], [], c="k", linewidth=0.5)
+        rays[i].range_vals = np.array(rays[i].range_vals) / 1000
+
+    def update_frame(i):
+        for j in range(n_rays):
+            lines[j].set_xdata(rays[j].range_vals[:i])
+            lines[j].set_ydata(rays[j].depth_vals[:i])
+
+    _ = FuncAnimation(
+        fig, update_frame, frames=len(time_vals), interval=1000 / framerate
+    )
+    plt.show()
+
+
 if __name__ == "__main__":
     sources = [
         SourceConfig(
             range_pos=0.0,
             depth_pos=1000.0,
-            ray_fan_limits=(-0.2, 0.2),
+            ray_fan_limits=(-0.3, 0.3),
             n_rays=100,
             source_level=150,
         )
@@ -127,4 +170,5 @@ if __name__ == "__main__":
     beams = trace_beams(config)
     rays = [bm.central_ray for bm in beams]
     rays = fix_rays(rays)
-    plot_rays(config, rays)
+    # plot_rays(config, rays)
+    animate_propagation(config, rays, 10)
