@@ -23,8 +23,6 @@ pub struct ProgConfig {
     #[pyo3(get, set)]
     pub depth_step: f64,
     #[pyo3(get, set)]
-    pub save_to_csv: bool,
-    #[pyo3(get, set)]
     pub max_range: f64,
     #[pyo3(get, set)]
     pub min_range: f64,
@@ -143,7 +141,6 @@ impl ProgConfig {
     fn py_new(
         depth_step: f64,
         max_it: usize,
-        save_to_csv: bool,
         max_range: f64,
         min_range: f64,
         output_path: String,
@@ -151,7 +148,6 @@ impl ProgConfig {
         ProgConfig {
             depth_step,
             max_it,
-            save_to_csv,
             max_range,
             min_range,
             output_path,

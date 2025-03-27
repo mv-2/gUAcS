@@ -1,5 +1,5 @@
 from guacs import (
-    trace_rays,
+    # trace_rays,
     trace_beams,
     Config,
     ProgConfig,
@@ -117,7 +117,6 @@ if __name__ == "__main__":
     prog_config = ProgConfig(
         max_it=int(1e5),
         depth_step=1.0,
-        save_to_csv=False,
         max_range=2e5,
         min_range=-10.0,
         output_path="output_data",

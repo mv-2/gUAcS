@@ -105,12 +105,14 @@ pub struct Ssp {
 struct IntersectLoc {
     range: f64,
     depth: f64,
+    time: f64,
     edge_id: usize,
 }
 
 pub struct ReflectResult {
     pub range: f64,
     pub depth: f64,
+    pub time: f64,
     pub ang: f64,
 }
 
@@ -211,6 +213,7 @@ impl Ray {
             reflect_ans.range + REFLECT_OFFSET * reflect_ans.ang.cos();
         self.depth_vals[self.ray_iter + 1] =
             reflect_ans.depth + REFLECT_OFFSET * reflect_ans.ang.sin();
+        self.time_vals[self.ray_iter + 1] = reflect_ans.time;
     }
 
     /// Trace ray using geometric theory
@@ -255,25 +258,11 @@ impl Ray {
                 ray.update_intersection(&reflect_ans, ssp);
                 // recalculate depth direction
                 depth_dir = reflect_ans.ang.sin().signum();
-                // set next range and depth vals to minor offset from body to avoid ray getting
-                // caught inside of [`Body`] struct
-                ray.range_vals[ray.ray_iter + 1] =
-                    reflect_ans.range + REFLECT_OFFSET * reflect_ans.ang.cos();
-                ray.depth_vals[ray.ray_iter + 1] =
-                    reflect_ans.depth + REFLECT_OFFSET * reflect_ans.ang.sin();
                 // Interpolate for next sound speed profile value
                 c_i = ssp.interp_sound_speed(reflect_ans.depth);
             }
             // step iter value for calculation step taken
             ray.ray_iter += 1;
-        }
-
-        // save all rays to csv if config requires. NOTE:This is very slow
-        if prog_config.save_to_csv {
-            match ray.write_to_csv(&prog_config.output_path) {
-                Ok(_) => (),
-                Err(_) => panic!("Ray {:} could not be written to csv", ray.ray_id),
-            }
         }
 
         // truncate vectors to remove any wasted space
@@ -309,6 +298,7 @@ impl Body {
         let mut ray_dist_vals: Vec<Option<f64>> = vec![None; self.range_vals.len() - 1];
         let ray_range_step: f64 = ray.range_vals[ray.ray_iter + 1] - ray.range_vals[ray.ray_iter];
         let ray_depth_step: f64 = ray.depth_vals[ray.ray_iter + 1] - ray.depth_vals[ray.ray_iter];
+        let ray_time_step: f64 = ray.time_vals[ray.ray_iter + 1] - ray.time_vals[ray.ray_iter];
         // Define valid ranges for solution parameters as defined in theory document
         let edge_param_range: RangeInclusive<f64> = RangeInclusive::new(0.0, 1.0);
         // iterate over each edge in polygon to find valid intersections
@@ -362,6 +352,7 @@ impl Body {
                 true => Some(IntersectLoc {
                     range: ray.range_vals[ray.ray_iter] + ray_dists_numeric[id] * ray_range_step,
                     depth: ray.depth_vals[ray.ray_iter] + ray_dists_numeric[id] * ray_depth_step,
+                    time: ray.time_vals[ray.ray_iter] + ray_dists_numeric[id] * ray_time_step,
                     edge_id: id,
                 }),
                 false => None,
@@ -372,7 +363,6 @@ impl Body {
 
     fn calculate_reflection(&self, ray: &Ray) -> Option<ReflectResult> {
         let intersection_ans: IntersectLoc = self.check_finite_intersection(ray)?;
-        //TODO: Add time interpolation
         let ray_ang: f64 = (ray.depth_vals[ray.ray_iter + 1] - ray.depth_vals[ray.ray_iter])
             .atan2(ray.range_vals[ray.ray_iter + 1] - ray.range_vals[ray.ray_iter]);
         let side_ang: f64 = self.get_edge_ang(intersection_ans.edge_id);
@@ -380,6 +370,7 @@ impl Body {
         Some(ReflectResult {
             range: intersection_ans.range,
             depth: intersection_ans.depth,
+            time: intersection_ans.time,
             ang: new_ang,
         })
     }

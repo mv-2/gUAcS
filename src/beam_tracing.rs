@@ -1,6 +1,6 @@
 use crate::interface::{Config, EnvConfig, ProgConfig};
-use crate::path_tracing::{Ray, RayInit, Ssp, REFLECT_OFFSET};
-use num::complex::Complex64;
+use crate::path_tracing::{Ray, RayInit, Ssp};
+// use num::complex::Complex64;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 
@@ -37,7 +37,6 @@ impl Beam {
         let mut g_i: f64;
         let ang: f64 = init_source.init_ang;
         let mut depth_dir: f64 = ang.sin().signum();
-        // let mut range_dir: f64 = ang.cos().signum();
         // set initial sound speed values
         c_i = ssp.interp_sound_speed(beam.central_ray.depth_vals[0]);
 
@@ -67,28 +66,11 @@ impl Beam {
                 beam.central_ray.update_intersection(&reflect_ans, ssp);
                 // recalculate depth direction
                 depth_dir = reflect_ans.ang.sin().signum();
-                // set next range and depth vals to minor offset from body to avoid ray getting
-                // caught inside of [`Body`] struct
-                beam.central_ray.range_vals[beam.central_ray.ray_iter + 1] =
-                    reflect_ans.range + REFLECT_OFFSET * reflect_ans.ang.cos();
-                beam.central_ray.depth_vals[beam.central_ray.ray_iter + 1] =
-                    reflect_ans.depth + REFLECT_OFFSET * reflect_ans.ang.sin();
                 // Interpolate for next sound speed profile value
                 c_i = ssp.interp_sound_speed(reflect_ans.depth);
             }
             // step iter value for calculation step taken
             beam.central_ray.ray_iter += 1;
-        }
-
-        // save all rays to csv if config requires. NOTE:This is very slow
-        if prog_config.save_to_csv {
-            match beam.central_ray.write_to_csv(&prog_config.output_path) {
-                Ok(_) => (),
-                Err(_) => panic!(
-                    "Ray {:} could not be written to csv",
-                    beam.central_ray.ray_id
-                ),
-            }
         }
 
         // truncate vectors to remove any wasted space
