@@ -10,7 +10,7 @@ use std::ops::RangeInclusive;
 use uuid::Uuid;
 
 // NUCLEAR OPTION FOR REFLECTION CALCULATION
-const REFLECT_OFFSET: f64 = 0.1;
+pub const REFLECT_OFFSET: f64 = 0.1;
 
 /// Stores data on body geometry
 #[derive(Deserialize, Debug, Clone)]
@@ -56,18 +56,18 @@ pub struct Ray {
 
 /// Stores data required to initialise rays
 pub struct RayInit {
-    range_pos: f64,
-    depth_pos: f64,
-    init_time: f64,
-    init_ang: f64,
-    init_iter: usize,
+    pub range_pos: f64,
+    pub depth_pos: f64,
+    pub init_time: f64,
+    pub init_ang: f64,
+    pub init_iter: usize,
     pub init_sound_speed: f64,
-    range_lims: RangeInclusive<f64>,
+    pub range_lims: RangeInclusive<f64>,
 }
 
 impl RayInit {
     /// Create [`RayInit`] struct from [`SourceConfig`] struct
-    fn from_source(
+    pub fn from_source(
         source: &SourceConfig,
         ray_id: usize,
         init_sound_speed: f64,
@@ -108,10 +108,10 @@ struct IntersectLoc {
     edge_id: usize,
 }
 
-struct ReflectResult {
-    range: f64,
-    depth: f64,
-    ang: f64,
+pub struct ReflectResult {
+    pub range: f64,
+    pub depth: f64,
+    pub ang: f64,
 }
 
 impl Ssp {
@@ -122,7 +122,7 @@ impl Ssp {
 }
 
 impl EnvConfig {
-    fn check_all_body_reflections(&self, ray: &Ray) -> Option<ReflectResult> {
+    pub fn check_all_body_reflections(&self, ray: &Ray) -> Option<ReflectResult> {
         // let mut temp_ans: Option<(f64, f64, usize)>;
         // I would love to directly iterate body values but unfortunately borrow checker is whiny
         for i in 0..self.bodies.len() {
@@ -155,7 +155,7 @@ impl Ray {
     }
 
     /// Update step for ray
-    fn update_iteration(
+    pub fn update_iteration(
         &mut self,
         c_i: &mut f64,
         c_i1: &f64,
@@ -197,6 +197,22 @@ impl Ray {
         }
     }
 
+    /// Update reflection of ray
+    pub fn update_intersection(&mut self, reflect_ans: &ReflectResult, ssp: &Ssp) {
+        // set next ray location to intersection location
+        self.range_vals[self.ray_iter + 1] = reflect_ans.range;
+        self.depth_vals[self.ray_iter + 1] = reflect_ans.depth;
+        // reset xi ray parameter on new reflected source angle
+        self.ray_param = reflect_ans.ang.cos() / ssp.interp_sound_speed(reflect_ans.depth);
+        self.ray_iter += 1;
+        // set next range and depth vals to minor offset from body to avoid ray getting
+        // caught inside of [`Body`] struct
+        self.range_vals[self.ray_iter + 1] =
+            reflect_ans.range + REFLECT_OFFSET * reflect_ans.ang.cos();
+        self.depth_vals[self.ray_iter + 1] =
+            reflect_ans.depth + REFLECT_OFFSET * reflect_ans.ang.sin();
+    }
+
     /// Trace ray using geometric theory
     pub fn trace_from_init_source(
         init_source: &RayInit,
@@ -225,7 +241,7 @@ impl Ray {
             );
             // calculate local sound speed gradient
             g_i = (c_i1 - c_i) / prog_config.depth_step;
-            // Determine if ray is turning or continuing monotonic path
+            // iterate depth step. This function will update value of c_i and depth_dir as required
             ray.update_iteration(
                 &mut c_i,
                 &c_i1,
@@ -234,24 +250,19 @@ impl Ray {
                 &prog_config.depth_step,
             );
             // Check for intersections on all bodies in simulation
-            if let Some(ans) = env_config.check_all_body_reflections(&ray) {
-                // set next ray location to intersection location
-                ray.range_vals[ray.ray_iter + 1] = ans.range;
-                ray.depth_vals[ray.ray_iter + 1] = ans.depth;
-                // reset xi ray parameter on new reflected source angle
-                ray.ray_param = ans.ang.cos() / ssp.interp_sound_speed(ans.depth);
-                // recalculate coordinate system direction signs
-                depth_dir = ans.ang.sin().signum(); // TODO: maybe change this to a non-trig
-                                                    // function in order to reduce computation
-                                                    // range_dir = ans.ang.cos().signum();
-                                                    // step iter value for calculation step taken
-                ray.ray_iter += 1;
+            if let Some(reflect_ans) = env_config.check_all_body_reflections(&ray) {
+                // Update intersection in step
+                ray.update_intersection(&reflect_ans, ssp);
+                // recalculate depth direction
+                depth_dir = reflect_ans.ang.sin().signum();
                 // set next range and depth vals to minor offset from body to avoid ray getting
                 // caught inside of [`Body`] struct
-                ray.range_vals[ray.ray_iter + 1] = ans.range + REFLECT_OFFSET * ans.ang.cos();
-                ray.depth_vals[ray.ray_iter + 1] = ans.depth + REFLECT_OFFSET * ans.ang.sin();
+                ray.range_vals[ray.ray_iter + 1] =
+                    reflect_ans.range + REFLECT_OFFSET * reflect_ans.ang.cos();
+                ray.depth_vals[ray.ray_iter + 1] =
+                    reflect_ans.depth + REFLECT_OFFSET * reflect_ans.ang.sin();
                 // Interpolate for next sound speed profile value
-                c_i = ssp.interp_sound_speed(ans.depth);
+                c_i = ssp.interp_sound_speed(reflect_ans.depth);
             }
             // step iter value for calculation step taken
             ray.ray_iter += 1;
@@ -305,6 +316,7 @@ impl Body {
             edge_depth_step = self.depth_vals[i + 1] - self.depth_vals[i];
             edge_range_step = self.range_vals[i + 1] - self.range_vals[i];
             // check for parallel edge and ray direction to save computation effort
+            // TODO: Need else case
             if edge_range_step / edge_depth_step != ray_range_step / ray_depth_step {
                 edge_dist = ((self.range_vals[i] - ray.range_vals[ray.ray_iter]) * ray_depth_step
                     - (self.depth_vals[i] - ray.depth_vals[ray.ray_iter]) * ray_range_step)

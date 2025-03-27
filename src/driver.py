@@ -1,5 +1,6 @@
 from guacs import (
     trace_rays,
+    trace_beams,
     Config,
     ProgConfig,
     EnvConfig,
@@ -123,6 +124,8 @@ if __name__ == "__main__":
     )
 
     config = Config(prog_config=prog_config, env_config=env_config, sources=sources)
-    rays = trace_rays(config)
+    # rays = trace_rays(config)
+    beams = trace_beams(config)
+    rays = [bm.central_ray for bm in beams]
     rays = fix_rays(rays)
     plot_rays(config, rays)
