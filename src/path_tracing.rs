@@ -24,21 +24,21 @@ pub struct Body {
     // TODO: bounding box values to be added as later optimisation
 }
 
-/// Stores halfspace geometry and physical property data
-#[derive(Deserialize, Debug, Clone)]
-#[pyclass]
-pub struct HalfSpace {
-    #[pyo3(get, set)]
-    pub body: Body,
-    #[pyo3(get, set)]
-    pub sound_speed: f64,
-    #[pyo3(get, set)]
-    pub density: f64,
-}
+///// Stores halfspace geometry and physical property data
+//#[derive(Deserialize, Debug, Clone)]
+//#[pyclass]
+//pub struct HalfSpace {
+//    #[pyo3(get, set)]
+//    pub body: Body,
+//    #[pyo3(get, set)]
+//    pub sound_speed: f64,
+//    #[pyo3(get, set)]
+//    pub density: f64,
+//}
 
 /// Stores Ray propagation data
 #[pyclass]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Ray {
     #[pyo3(get, set)]
     pub range_vals: Vec<f64>,
@@ -61,7 +61,7 @@ pub struct RayInit {
     init_time: f64,
     init_ang: f64,
     init_iter: usize,
-    init_sound_speed: f64,
+    pub init_sound_speed: f64,
     range_lims: RangeInclusive<f64>,
 }
 
@@ -154,6 +154,49 @@ impl Ray {
         ray
     }
 
+    /// Update step for ray
+    fn update_iteration(
+        &mut self,
+        c_i: &mut f64,
+        c_i1: &f64,
+        g_i: &f64,
+        depth_dir: &mut f64,
+        depth_step: &f64,
+    ) {
+        if (self.ray_param * *c_i1).abs() < 1.0 {
+            // calculate range and time steps for given depth step
+            self.range_vals[self.ray_iter + 1] = self.range_vals[self.ray_iter]
+                + (1.0 / (self.ray_param * g_i))
+                    * ((1.0 - (self.ray_param * *c_i).powi(2)).sqrt()
+                        - (1.0 - (self.ray_param * *c_i1).powi(2)).sqrt());
+            self.time_vals[self.ray_iter + 1] = self.time_vals[self.ray_iter]
+                + (((*c_i1 / *c_i) * (1.0 + (1.0 - (self.ray_param * *c_i).powi(2)).sqrt())
+                    / (1.0 + (1.0 - (self.ray_param * c_i1).powi(2)).sqrt()))
+                .ln()
+                    / g_i)
+                    .abs();
+            // step depth values
+            self.depth_vals[self.ray_iter + 1] =
+                self.depth_vals[self.ray_iter] + *depth_dir * depth_step;
+            // set sound speed values from preceding to avoid additional interpolation
+            *c_i = *c_i1;
+        } else {
+            // Set depth to same value as ray is turning in this layer of medium
+            self.depth_vals[self.ray_iter + 1] = self.depth_vals[self.ray_iter];
+            // reverse depth direction for turn
+            *depth_dir = -*depth_dir;
+            // Calculate range and time steps for turning ray
+            self.range_vals[self.ray_iter + 1] = self.range_vals[self.ray_iter]
+                + 2.0 * (1.0 - (self.ray_param * *c_i).powi(2)).sqrt() / (self.ray_param * g_i);
+            self.time_vals[self.ray_iter + 1] = self.time_vals[self.ray_iter]
+                + 2.0
+                    * ((1.0 + (1.0 - (self.ray_param * *c_i).powi(2)).sqrt())
+                        / (self.ray_param * *c_i))
+                        .ln()
+                    / g_i.abs();
+        }
+    }
+
     /// Trace ray using geometric theory
     pub fn trace_from_init_source(
         init_source: &RayInit,
@@ -161,8 +204,6 @@ impl Ray {
         env_config: &EnvConfig,
         ssp: &Ssp,
     ) -> Self {
-        let mut range_step: f64;
-        let mut time_step: f64;
         let mut c_i: f64;
         let mut c_i1: f64;
         let mut g_i: f64;
@@ -185,42 +226,14 @@ impl Ray {
             // calculate local sound speed gradient
             g_i = (c_i1 - c_i) / prog_config.depth_step;
             // Determine if ray is turning or continuing monotonic path
-            if (ray.ray_param * c_i1).abs() < 1.0 {
-                // calculate range and time steps for given depth step
-                range_step = (1.0 / (ray.ray_param * g_i))
-                    * ((1.0 - (ray.ray_param * c_i).powi(2)).sqrt()
-                        - (1.0 - (ray.ray_param * c_i1).powi(2)).sqrt());
-                time_step = (((c_i1 / c_i) * (1.0 + (1.0 - (ray.ray_param * c_i).powi(2)).sqrt())
-                    / (1.0 + (1.0 - (ray.ray_param * c_i1).powi(2)).sqrt()))
-                .ln()
-                    / g_i)
-                    .abs();
-                // step depth values
-                ray.depth_vals[ray.ray_iter + 1] =
-                    ray.depth_vals[ray.ray_iter] + depth_dir * prog_config.depth_step;
-                // set sound speed values from preceding to avoid additional interpolation
-                c_i = c_i1;
-            } else {
-                // Set depth to same value as ray is turning in this layer of medium
-                ray.depth_vals[ray.ray_iter + 1] = ray.depth_vals[ray.ray_iter];
-                // reverse depth direction for turn
-                depth_dir = -depth_dir;
-                // Calculate range and time steps for turning ray
-                range_step = (2.0 * (1.0 - (ray.ray_param * c_i).powi(2)).sqrt()
-                    / (ray.ray_param * g_i))
-                    .abs();
-                time_step = 2.0
-                    * ((1.0 + (1.0 - (ray.ray_param * c_i).powi(2)).sqrt())
-                        / (ray.ray_param * c_i))
-                        .ln()
-                    / g_i.abs();
-            }
-            // Update range and time from calculated steps
-            ray.range_vals[ray.ray_iter + 1] = ray.range_vals[ray.ray_iter] + range_step;
-            // ray.range_vals[ray.ray_iter] + range_dir * range_step;
-            ray.time_vals[ray.ray_iter + 1] = ray.time_vals[ray.ray_iter] + time_step;
-            // Check if any intersections occur and if any valid solutions exist then ray
-            // parameters will be reassigned
+            ray.update_iteration(
+                &mut c_i,
+                &c_i1,
+                &g_i,
+                &mut depth_dir,
+                &prog_config.depth_step,
+            );
+            // Check for intersections on all bodies in simulation
             if let Some(ans) = env_config.check_all_body_reflections(&ray) {
                 // set next ray location to intersection location
                 ray.range_vals[ray.ray_iter + 1] = ans.range;
@@ -392,7 +405,7 @@ fn intersection_ray_dist_param(
 }
 
 /// Driver function to trace all rays from [`Config`] struct
-pub fn trace_from_config(cfg: Config) -> Vec<Ray> {
+pub fn trace_rays(cfg: Config) -> Vec<Ray> {
     let mut init_sources: Vec<RayInit> = vec![];
     let mut init_sound_speed: f64;
     for source in cfg.sources {

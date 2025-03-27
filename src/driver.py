@@ -1,11 +1,11 @@
 from guacs import (
-    run_sim,
+    trace_rays,
     Config,
     ProgConfig,
     EnvConfig,
     SourceConfig,
     Body,
-    HalfSpace,
+    # HalfSpace,
     Ssp,
 )
 import numpy as np
@@ -88,16 +88,16 @@ if __name__ == "__main__":
         ),
     ]
 
-    halfspaces = [
-        HalfSpace(
-            body=Body(
-                range_vals=[0.0, 100000.0, 100000.0, 0.0, 0.0],
-                depth_vals=[5000.0, 5000.0, 5100.0, 5100.0, 5000.0],
-            ),
-            sound_speed=1600.0,
-            density=1.5,
-        )
-    ]
+    # halfspaces = [
+    #     HalfSpace(
+    #         body=Body(
+    #             range_vals=[0.0, 100000.0, 100000.0, 0.0, 0.0],
+    #             depth_vals=[5000.0, 5000.0, 5100.0, 5100.0, 5000.0],
+    #         ),
+    #         sound_speed=1600.0,
+    #         density=1.5,
+    #     )
+    # ]
 
     max_depth = 5000
     depth_step = 100
@@ -110,7 +110,7 @@ if __name__ == "__main__":
         bodies=bodies,
         ssp=Ssp(ssp_knots=ssp_knots, ssp_coefs=ssp_coefs, ssp_degree=ssp_degree),
         swell_height=0.0,
-        halfspaces=halfspaces,
+        # halfspaces=halfspaces,
     )
 
     prog_config = ProgConfig(
@@ -123,6 +123,6 @@ if __name__ == "__main__":
     )
 
     config = Config(prog_config=prog_config, env_config=env_config, sources=sources)
-    rays = run_sim(config)
+    rays = trace_rays(config)
     rays = fix_rays(rays)
     plot_rays(config, rays)
