@@ -63,6 +63,7 @@ pub struct RayInit {
     pub init_iter: usize,
     pub init_sound_speed: f64,
     pub range_lims: RangeInclusive<f64>,
+    pub frequency: f64,
 }
 
 impl RayInit {

@@ -49,7 +49,7 @@ pub struct EnvConfig {
 #[pyclass]
 pub struct SourceConfig {
     // eventually each ray should be set a source_level based on its angle and the type of shot
-    // #[pyo3(get, set)]
+    #[pyo3(get, set)]
     pub range_pos: f64,
     #[pyo3(get, set)]
     pub depth_pos: f64,
@@ -59,6 +59,8 @@ pub struct SourceConfig {
     pub n_rays: usize,
     #[pyo3(get, set)]
     pub source_level: f64,
+    #[pyo3(get, set)]
+    pub frequency: f64,
 }
 
 // Python __new__ constructors for required structs
@@ -71,6 +73,7 @@ impl SourceConfig {
         ray_fan_limits: [f64; 2],
         n_rays: usize,
         source_level: f64,
+        frequency: f64,
     ) -> Self {
         SourceConfig {
             range_pos,
@@ -78,6 +81,7 @@ impl SourceConfig {
             ray_fan_limits,
             n_rays,
             source_level,
+            frequency,
         }
     }
 }

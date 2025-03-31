@@ -1,8 +1,9 @@
 use crate::interface::{Config, EnvConfig, ProgConfig};
 use crate::path_tracing::{Ray, RayInit, Ssp};
-// use num::complex::Complex64;
+use num::complex::Complex64;
 use pyo3::prelude::*;
 use rayon::prelude::*;
+use std::f64::consts::PI;
 
 // Stores Beam propagation
 #[pyclass]
@@ -11,18 +12,24 @@ pub struct Beam {
     #[pyo3(get, set)]
     pub central_ray: Ray,
     // #[pyo3(get, set)]
-    // pub p: Complex64,
+    pub p_vals: Vec<Complex64>,
     // #[pyo3(get, set)]
-    // pub q: Complex64,
+    pub q_vals: Vec<Complex64>,
+    // #[pyo3(get, set)]
+    pub epsilon: Complex64,
 }
 
 impl Beam {
     fn init_from_configs(init_source: &RayInit, prog_config: &ProgConfig) -> Beam {
-        Beam {
+        let mut bm: Beam = Beam {
             central_ray: Ray::init_from_cfgs(init_source, prog_config),
-            // p: Complex64::new(1.0, 0.0),
-            // q: Complex64::new(0.0, 1.0 / init_source.init_sound_speed),
-        }
+            p_vals: vec![Complex64::ZERO],
+            q_vals: vec![Complex64::ZERO],
+            epsilon: Complex64::new(0.0, init_source.frequency*2*PI,
+        };
+        bm.q_vals[0] = Complex64::new(0.0, 1.0 / init_source.init_sound_speed);
+        bm.q_vals[0] = Complex64::new(1.0, 0.0);
+        bm
     }
 
     fn trace_from_init_source(
