@@ -3,7 +3,6 @@ use crate::path_tracing::{Ray, RayInit, Ssp};
 use num::complex::Complex64;
 use pyo3::prelude::*;
 use rayon::prelude::*;
-use std::f64::consts::PI;
 
 // Stores Beam propagation
 #[pyclass]
@@ -16,7 +15,7 @@ pub struct Beam {
     // #[pyo3(get, set)]
     pub q_vals: Vec<Complex64>,
     // #[pyo3(get, set)]
-    pub epsilon: Complex64,
+    pub eps_vals: Vec<Complex64>,
 }
 
 impl Beam {
@@ -25,7 +24,7 @@ impl Beam {
             central_ray: Ray::init_from_cfgs(init_source, prog_config),
             p_vals: vec![Complex64::ZERO],
             q_vals: vec![Complex64::ZERO],
-            epsilon: Complex64::new(0.0, init_source.frequency*2*PI,
+            eps_vals: vec![Complex64::ZERO],
         };
         bm.q_vals[0] = Complex64::new(0.0, 1.0 / init_source.init_sound_speed);
         bm.q_vals[0] = Complex64::new(1.0, 0.0);
@@ -41,10 +40,14 @@ impl Beam {
         let mut beam: Beam = Beam::init_from_configs(init_source, prog_config);
         let mut c_i: f64;
         let mut c_i1: f64;
+        let mut c_im1: f64;
         let mut g_i: f64;
         let ang: f64 = init_source.init_ang;
         let mut depth_dir: f64 = ang.sin().signum();
         // set initial sound speed values
+        c_im1 = ssp.interp_sound_speed(
+            beam.central_ray.depth_vals[0] - depth_dir * prog_config.depth_step,
+        );
         c_i = ssp.interp_sound_speed(beam.central_ray.depth_vals[0]);
 
         while (beam.central_ray.ray_iter < prog_config.max_it - init_source.init_iter)
@@ -67,6 +70,8 @@ impl Beam {
                 &mut depth_dir,
                 &prog_config.depth_step,
             );
+            // Update p-q equations
+            beam.update_pq(&c_i, &c_i1, &c_im1, &g_i, &prog_config.depth_step);
             // Check for intersections on all bodies in simulation
             if let Some(reflect_ans) = env_config.check_all_body_reflections(&beam.central_ray) {
                 // Update intersection in step
@@ -81,16 +86,35 @@ impl Beam {
         }
 
         // truncate vectors to remove any wasted space
-        beam.central_ray
-            .depth_vals
-            .truncate(beam.central_ray.ray_iter + 1);
-        beam.central_ray
-            .range_vals
-            .truncate(beam.central_ray.ray_iter + 1);
-        beam.central_ray
-            .time_vals
-            .truncate(beam.central_ray.ray_iter + 1);
+        beam.truncate_beam();
         beam
+    }
+
+    /// Update p-q ODE values
+    fn update_pq(&mut self, c_i: &f64, c_i1: &f64, c_im1: &f64, g_i: &f64, depth_step: &f64) {
+        // Calculate arc length in last depth step
+        let arc_step: f64 = ((self.central_ray.ray_param * c_i1 + 1.0)
+            * (self.central_ray.ray_param * c_i - 1.0)
+            / ((self.central_ray.ray_param * c_i1 - 1.0)
+                * (self.central_ray.ray_param * c_i + 1.0)))
+            .abs()
+            .ln()
+            / (2.0 * g_i * self.central_ray.ray_param);
+        //
+        //calculate 2nd derivate of SSP wrt normal
+        let c_nn: f64 =
+            -self.central_ray.ray_param * c_i * (c_i1 - 2.0 * c_i + c_im1) / depth_step.powi(2);
+        // update q
+        self.q_vals[self.central_ray.ray_iter + 1] =
+            self.q_vals[self.central_ray.ray_iter] + c_i * self.p_vals[self.central_ray.ray_iter];
+    }
+
+    /// Remove unneeded empty cells
+    pub fn truncate_beam(&mut self) {
+        self.central_ray.truncate_ray();
+        self.eps_vals.truncate(self.central_ray.ray_iter + 1);
+        self.q_vals.truncate(self.central_ray.ray_iter + 1);
+        self.p_vals.truncate(self.central_ray.ray_iter + 1);
     }
 }
 

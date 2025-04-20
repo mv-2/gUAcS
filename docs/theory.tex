@@ -158,10 +158,10 @@ Reflection angle off an object can be simply calculated by noting that the angle
   \centering
   \input{reflect_diagram.tikz.tex}
   \caption{Reflection of ray on solid surface}
-  \label{fig:reflect_diagram}
+  \label{fig:reflect_diagram}aaaa<F10>
 \end{figure}
 \begin{align*}
-  \theta_1 &= \theta_2 \\
+  \theta_1 &= \theta_2 \\aaaa
   \implies \theta_{incoming} + \theta_{surface} &= \theta_{outgoing} - \theta_{surface}\\   
 \end{align*}
 \begin{equation}
@@ -169,6 +169,66 @@ Reflection angle off an object can be simply calculated by noting that the angle
   \theta_{outgoing} = \theta_{incoming} + 2\cdot\theta_{surface}
 \end{equation}
 
+\section{Gaussian Beam Tracing}
+\subsection{Arc Step Integration Derivation}
+\begin{align*}
+  \int_{z_i}^{z_{i+1}}ds &= \int_{z_i}^{z_{i+1}}\frac{dz}{\sqrt{1-\xi^2\cdot c^2(z)}} \\
+  &= \int_{z_i}^{z_{i+1}}\frac{dz}{\sqrt{1-\xi^2\cdot (c_i + g_i\cdot(z - z_i))^2}} \\  
+  &= \left[ \frac{1}{2\cdot g_i \cdot \xi}\ln{\left(\left| \frac{\xi(g_i(z-z_i)+c_i)+1}{\xi(g_i(z-z_i) + c_i)-1}\right|\right)} \right]_{z_i}^{z_{i+1}} \\
+  &= \frac{1}{2\cdot g_i\cdot\xi}\left[ \ln{\left(\left| \frac{\xi(g_i(z_{i+1}-z_i)+c_i)+1}{\xi(g_i(z_{i+1}-z_i) + c_i)-1}\right|\right)} - \ln{\left(\left| \frac{\xi\cdot c_i+1}{\xi \cdot c_i-1}\right|\right)}\right]\\
+  &= \frac{1}{2\cdot g_i\cdot\xi}\ln{\left(\left| \frac{(\xi(g_i(z_{i+1}-z_i)+c_i)+1)(\xi\cdot c_i -1)}{(\xi(g_i(z_{i+1}-z_i) + c_i)-1)(\xi\cdot c_i +1)}\right|\right)}\\
+  &= \frac{1}{2\cdot g_i\cdot\xi}\ln{\left(\left| \frac{(\xi\cdot c_{i+1}+1)(\xi\cdot c_i -1)}{(\xi\cdot c_{i+1}-1)(\xi\cdot c_i +1)}\right|\right)}\textcolor{gray}{,\;\;g_{i}\cdot\Delta z=c_{i+_1}-c_i}
+\end{align*}
+\subsection{Derivation of $c_{nn}$}
+\begin{align*}
+  c_{nn} &= \frac{\partial^2 c}{\partial n^2}\\
+         &=\frac{\partial ^2 c}{\partial r^2}\left(\frac{dr}{dn}\right)^2 + 2\cdot\frac{\partial^2 c}{\partial r\cdot \partial z}\left(\frac{dr}{dn}\right)\left(\frac{dz}{dn}\right) + \frac{\partial ^2 c}{\partial z^2 }\left(\frac{dz}{dn}\right)^2\\
+         &=\frac{\partial^2 c}{\partial z^2}\left(\frac{dz}{dn}\right)^2\textcolor{gray}{,\;\;c(z, r)=c(z)}\\
+         &=\frac{\partial ^2c}{\partial z^2}\left(-\frac{dr}{ds}\right)^2\\
+         &=\frac{\partial^2c}{\partial z^2}\left(-cos(\theta)\right)\\
+  \therefore c_{nn} &= \frac{\partial^2 c}{\partial z^2}(-\xi\cdot c)
+\end{align*}
+With the continuous definition of $c_{nn}$ known, the discretised form can then be derived.
+\begin{align*}
+  \frac{\partial^2 c}{\partial z^2} &= \frac{c_{i+1}-2\cdot c_i + c_{i-1}}{\Delta z^2}\\
+  \therefore \left.c_{nn}\right|_{z=z_i} &= -\xi\cdot c_i\cdot\left(\frac{c_{i+1}-2\cdot c_i + c_{i-1}}{\Delta z^2}\right)
+\end{align*}
+
+\subsection{Derivation of discretised $p-q$ ODEs}
+Consider that $p$ and $q$ are linked by equations \ref{eq:dqds} and \ref{eq:dpds}.
+\begin{equation}
+  \label{eq:dqds}
+  \frac{dq}{ds}=c(s)\cdot p(s)
+\end{equation}
+\begin{equation}
+  \label{eq:dpds}
+  \frac{dp}{ds}=\frac{-c_{nn}}{c^2(s)}q(s)
+\end{equation}
+In order to numerically solve these equations, an implicit solver is required. In order to derive this implicit solution, the equations must be converted to matrix form.
+\begin{align*}
+  \textrm{let}\;\;\bm{x}=\begin{bmatrix}q \\ s \end{bmatrix}\\
+  \therefore \dot{\bm{x}}=\begin{bmatrix} \frac{dq}{ds} \\ \frac{dp}{ds}\end{bmatrix}\\
+  \dot{\bm{x}} = \begin{bmatrix} 0 & c(s) \\ \frac{-c_{nn}}{c^2(s)} & 0\end{bmatrix}\bm{x}
+\end{align*}
+For a good implicit method, Radau3 is selected. This method is defined by the Butcher Tableu:
+\begin{center}
+  \begin{tabular}{c|c c}
+    $\frac{1}{3}$ & $\frac{5}{12}$ & $-\frac{1}{12}$ \\
+    $1$ & $\frac{3}{4}$ & $\frac{1}{4}$ \\
+    \hline
+                & $\frac{3}{4}$ & $\frac{1}{4}$
+  \end{tabular}
+\end{center}
+Such that:
+\begin{align*}
+  y_{n+1} = y_n + \frac{h}{4}\left(k_{n1} + 3\cdot k_{n2} \right)\\
+  k_{n1}=f(t_n + \frac{1}{3}, y_n + \frac{5}{12}\cdot k_{n1} -\frac{1}{12}\cdot k_{n2})\\
+  k_{n2}=f(t_n + \frac{2}{3}, y_n + \frac{3}{4}\cdot k_{n1} -\frac{1}{4}\cdot k_{n2})
+\end{align*}
+With this known, employ the calculated forms for the $p-q$ equations.
+\begin{align*}
+  
+\end{align*}
 \section{General Functions}
 \subsection{Sound Speed Profile Representation}
 The sound speed profile is treated as range invariant in the current \texttt{gUAcS} package. The profile is expressed as the knots, coefficients and degree of a B-spline within the configuration files for the program. This requires the B-spline to be evaluated at each depth point for the program. To do so De Boor's Algorithm is implemented where; $\{c_{i}\}$ is the set of spline coefficients, $\{t_{i}\}$ is the set of spline knots and $p$ is the order of the spline. The algorithm is shown below in Algorithm \ref{alg:deboor}.

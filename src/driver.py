@@ -114,6 +114,7 @@ if __name__ == "__main__":
             ray_fan_limits=(-0.3, 0.3),
             n_rays=100,
             source_level=150,
+            frequency=500,
         )
     ]
 

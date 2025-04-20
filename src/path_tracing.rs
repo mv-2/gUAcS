@@ -86,7 +86,8 @@ impl RayInit {
             init_iter: 0_usize,
             init_sound_speed,
             range_lims: RangeInclusive::new(prog_config.min_range, prog_config.max_range), // TODO:
-                                                                                           // Initialise this elsewhere
+            // Initialise this elsewhere
+            frequency: source.frequency,
         }
     }
 }
@@ -200,7 +201,14 @@ impl Ray {
         }
     }
 
-    /// Update reflection of ray
+    /// Remove unneeded cells
+    pub fn truncate_ray(&mut self) {
+        self.depth_vals.truncate(self.ray_iter + 1);
+        self.range_vals.truncate(self.ray_iter + 1);
+        self.time_vals.truncate(self.ray_iter + 1);
+    }
+
+    /// Update reflection step of ray propagation
     pub fn update_intersection(&mut self, reflect_ans: &ReflectResult, ssp: &Ssp) {
         // set next ray location to intersection location
         self.range_vals[self.ray_iter + 1] = reflect_ans.range;
@@ -267,9 +275,7 @@ impl Ray {
         }
 
         // truncate vectors to remove any wasted space
-        ray.depth_vals.truncate(ray.ray_iter + 1);
-        ray.range_vals.truncate(ray.ray_iter + 1);
-        ray.time_vals.truncate(ray.ray_iter + 1);
+        ray.truncate_ray();
         ray
     }
 
