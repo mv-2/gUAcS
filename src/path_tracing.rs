@@ -139,6 +139,12 @@ impl EnvConfig {
     }
 }
 
+/// Silly little enum for readability
+pub enum DirChange {
+    ChangeDir,
+    KeepDir,
+}
+
 impl Ray {
     /// Initialise [`Ray`] struct from config vals
     pub fn init_from_cfgs(init_source: &RayInit, prog_config: &ProgConfig) -> Ray {
@@ -161,12 +167,12 @@ impl Ray {
     /// Update step for ray
     pub fn update_iteration(
         &mut self,
-        c_i: &mut f64,
+        c_i: &f64,
         c_i1: &f64,
         g_i: &f64,
         depth_dir: &mut f64,
         depth_step: &f64,
-    ) {
+    ) -> DirChange {
         if (self.ray_param * *c_i1).abs() < 1.0 {
             // calculate range and time steps for given depth step
             self.range_vals[self.ray_iter + 1] = self.range_vals[self.ray_iter]
@@ -182,8 +188,7 @@ impl Ray {
             // step depth values
             self.depth_vals[self.ray_iter + 1] =
                 self.depth_vals[self.ray_iter] + *depth_dir * depth_step;
-            // set sound speed values from preceding to avoid additional interpolation
-            *c_i = *c_i1;
+            DirChange::KeepDir
         } else {
             // Set depth to same value as ray is turning in this layer of medium
             self.depth_vals[self.ray_iter + 1] = self.depth_vals[self.ray_iter];
@@ -198,6 +203,7 @@ impl Ray {
                         / (self.ray_param * *c_i))
                         .ln()
                     / g_i.abs();
+            DirChange::ChangeDir
         }
     }
 
@@ -254,13 +260,11 @@ impl Ray {
             // calculate local sound speed gradient
             g_i = (c_i1 - c_i) / prog_config.depth_step;
             // iterate depth step. This function will update value of c_i and depth_dir as required
-            ray.update_iteration(
-                &mut c_i,
-                &c_i1,
-                &g_i,
-                &mut depth_dir,
-                &prog_config.depth_step,
-            );
+            match ray.update_iteration(&c_i, &c_i1, &g_i, &mut depth_dir, &prog_config.depth_step) {
+                DirChange::KeepDir => c_i = c_i1,
+                DirChange::ChangeDir => (),
+            };
+
             // Check for intersections on all bodies in simulation
             if let Some(reflect_ans) = env_config.check_all_body_reflections(&ray) {
                 // Update intersection in step

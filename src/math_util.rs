@@ -21,6 +21,11 @@ pub fn deboor_alg(x: f64, knots: &[f64], coeffs: &[f64], order: usize) -> f64 {
     d_coeff[order]
 }
 
+/// RK4 step for variable step size
+pub fn rk4_var_step_2d() -> [f64; 2] {
+    todo!();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

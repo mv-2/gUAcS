@@ -1,5 +1,5 @@
 from guacs import (
-    # trace_rays,
+    trace_rays,
     trace_beams,
     Config,
     ProgConfig,
@@ -171,5 +171,5 @@ if __name__ == "__main__":
     beams = trace_beams(config)
     rays = [bm.central_ray for bm in beams]
     rays = fix_rays(rays)
-    # plot_rays(config, rays)
-    animate_propagation(config, rays, 10)
+    plot_rays(config, rays)
+    # animate_propagation(config, rays, 10)

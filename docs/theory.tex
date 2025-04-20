@@ -195,7 +195,7 @@ With the continuous definition of $c_{nn}$ known, the discretised form can then 
 \end{align*}
 
 \subsection{Derivation of discretised $p-q$ ODEs}
-Consider that $p$ and $q$ are linked by equations \ref{eq:dqds} and \ref{eq:dpds}.
+Consider that$p$ and $q$ are linked by equations \ref{eq:dqds} and \ref{eq:dpds}.
 \begin{equation}
   \label{eq:dqds}
   \frac{dq}{ds}=c(s)\cdot p(s)
@@ -204,6 +204,46 @@ Consider that $p$ and $q$ are linked by equations \ref{eq:dqds} and \ref{eq:dpds
   \label{eq:dpds}
   \frac{dp}{ds}=\frac{-c_{nn}}{c^2(s)}q(s)
 \end{equation}
+\subsubsection{Explicit Solver}
+Using the classic Runge-Kutta 4th order solver defined by the following Butcher Tableu.
+\begin{center}
+  \begin{tabular}{c|c c c c}
+    $0$ & $0$ & $0$ & $0$ & $0$ \\
+    $\frac{1}{2}$ & $\frac{1}{2}$ & $0$ & $0$ & $0$ \\
+    $\frac{1}{2}$ & $0$ & $\frac{1}{2}$ & $0$ & $0$ \\
+    $1$ & $0$ & $0$ & $1$ & $0$ \\
+    \hline
+        & $\frac{1}{6}$ & $\frac{1}{3}$ & $\frac{1}{3}$ & $\frac{1}{6}$
+  \end{tabular}
+\end{center}
+Such that:
+\begin{align*}
+  y_{n+1} = y_n + \frac{h}{6}\cdot\left(k_{n1} + 2\cdot k_{n2} + 2\cdot k_{n3} + k_{n4} \right)\\
+  k_{n1} = f(t_n, y_n)\\ 
+  k_{n2} = f\left(t_n + \frac{h}{2}, y_n + \frac{k_{n1}}{2}\right)\\
+  k_{n3} = f\left(t_n +\frac{h}{2}, y_n+\frac{k_{n2}}{2} \right)\\
+  k_{n4} = f\left(t_n + h, y_n + k_{n3} \right)\\
+\end{align*}
+Now consider this form based on the form of the $p-q$ equations. Let $j$ define the spatial step for $s=s_j$
+\begin{align*}
+  y_{k}&\equiv\bm{x}_k\\ 
+  t_k&\equiv s_k \\
+  f(t_k, y_k)&\equiv\dot{\bm{x}}_k=\begin{bmatrix} 0 & c(s_k) \\ \frac{-c_{nn}|_{s=s_k}}{c^2(s_k)} & 0\end{bmatrix}\begin{bmatrix} q_k \\ p_k\end{bmatrix} \\ 
+  \implies k_{n1} &= \begin{bmatrix} 0 & c(s_j) \\ \frac{-c_{nn, (j)}}{c^2(s_j)} & 0\end{bmatrix}\begin{bmatrix} q_j \\ p_j\end{bmatrix} \\
+  \implies k_{n2} &= \begin{bmatrix} 0 & c(s_{j+\frac{1}{2}}) \\ \frac{-c_{nn, (j+\frac{1}{2})}}{c^2(s_{j + \frac{1}{2}})} & 0\end{bmatrix}\left(\begin{bmatrix} q_j \\ p_j\end{bmatrix} + \frac{1}{2}k_{n1} \right) \\
+  \implies k_{n3} &= \begin{bmatrix} 0 & c(s_{j+\frac{1}{2}}) \\ \frac{-c_{nn, (j+\frac{1}{2})}}{c^2(s_{j + \frac{1}{2}})} & 0\end{bmatrix}\left(\begin{bmatrix} q_j \\ p_j\end{bmatrix} + \frac{1}{2}k_{n2} \right) \\
+  \implies k_{n4} &= \begin{bmatrix} 0 & c(s_{j+1}) \\ \frac{-c_{nn, (j+1)}}{c^2(s_{j + 1})} & 0\end{bmatrix}\left(\begin{bmatrix} q_j \\ p_j\end{bmatrix} + k_{n3} \right) \\
+  \implies \bm{x}_{j+1} &= \bm{x}_{j} + \frac{\Delta s}{6}\left(k_{n1} + 2\cdot k_{n2} + 2\cdot k_{n3} + k_{n4} \right)
+\end{align*}
+Where:
+\begin{align*}
+  c_{nn, (j)} &=  -\xi\cdot c_i\cdot\left(\frac{c_{i+1}-2\cdot c_i + c_{i-1}}{\Delta z^2}\right)\\
+  c_{nn, (j+1)} &=  -\xi\cdot c_{i+1}\cdot\left(\frac{c_{i+2}-2\cdot c_{i+1} + c_{i}}{\Delta z^2}\right)\\
+  c_{nn, (j+\frac{1}{2})} &=  -\xi\cdot c_{i+\frac{1}{2}}\cdot\left(\frac{c_{i+\frac{3}{2}}-2\cdot c_{i+\frac{1}{2}} + c_{i-\frac{1}{2}}}{\Delta z^2}\right)\\
+                          &=  -\xi\cdot (c_i + c_{i+1})\cdot\left(\frac{(c_{i+2} + c_{i+1})-2\cdot (c_{i} + c_{i+1}) + (c_{i-1} + c_{i})}{4\cdot\Delta z^2}\right)\\
+  \implies c_{nn, (j+\frac{1}{2})} &= -\xi\cdot (c_{i} + c_{i+1})\cdot\left(\frac{c_{i+2} - c_{i+1}-c_{i} + c_{i-1}}{4\cdot\Delta z^2}\right)\\
+\end{align*}
+\subsubsection{Implicit ODE Solver}
 In order to numerically solve these equations, an implicit solver is required. In order to derive this implicit solution, the equations must be converted to matrix form.
 \begin{align*}
   \textrm{let}\;\;\bm{x}=\begin{bmatrix}q \\ s \end{bmatrix}\\
@@ -222,12 +262,15 @@ For a good implicit method, Radau3 is selected. This method is defined by the Bu
 Such that:
 \begin{align*}
   y_{n+1} = y_n + \frac{h}{4}\left(k_{n1} + 3\cdot k_{n2} \right)\\
-  k_{n1}=f(t_n + \frac{1}{3}, y_n + \frac{5}{12}\cdot k_{n1} -\frac{1}{12}\cdot k_{n2})\\
-  k_{n2}=f(t_n + \frac{2}{3}, y_n + \frac{3}{4}\cdot k_{n1} -\frac{1}{4}\cdot k_{n2})
+  k_{n1}=f(t_n + \frac{\Delta t}{3}, y_n + \frac{5}{12}\cdot k_{n1} -\frac{1}{12}\cdot k_{n2})\\
+  k_{n2}=f(t_n + \frac{2\cdot\Delta t}{3}, y_n + \frac{3}{4}\cdot k_{n1} -\frac{1}{4}\cdot k_{n2})
 \end{align*}
 With this known, employ the calculated forms for the $p-q$ equations.
 \begin{align*}
-  
+  y_{k}&\equiv\bm{x}_k\\ 
+  t_k&\equiv s_k \\
+  f(t_k, y_k)&\equiv\dot{\bm{x}}_k=\begin{bmatrix} 0 & c(s_k) \\ \frac{-c_{nn}|_{s=s_k}}{c^2(s_k)} & 0\end{bmatrix}\begin{bmatrix} q_k \\ p_k\end{bmatrix}
+  \implies k_{n1} = \dot{\bm{x}}|
 \end{align*}
 \section{General Functions}
 \subsection{Sound Speed Profile Representation}
