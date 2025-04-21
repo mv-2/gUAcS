@@ -59,6 +59,7 @@ impl Beam {
             beam.central_ray.depth_vals[0] + 2.0 * depth_dir * prog_config.depth_step,
         );
 
+        // while loop to iterate updates of ray
         while (beam.central_ray.ray_iter < prog_config.max_it - init_source.init_iter)
             && (init_source
                 .range_lims
@@ -73,7 +74,7 @@ impl Beam {
                 &c_i,
                 &c_i1,
                 &g_i,
-                &mut depth_dir,
+                &depth_dir,
                 &prog_config.depth_step,
             ) {
                 DirChange::KeepDir => {
@@ -83,10 +84,11 @@ impl Beam {
                 }
                 DirChange::ChangeDir => {
                     std::mem::swap(&mut c_im1, &mut c_i1);
+                    depth_dir = -depth_dir;
                 }
             };
             c_i2 = ssp.interp_sound_speed(
-                beam.central_ray.depth_vals[beam.central_ray.ray_iter]
+                beam.central_ray.depth_vals[beam.central_ray.ray_iter + 1]
                     + 2.0 * depth_dir * prog_config.depth_step,
             );
 

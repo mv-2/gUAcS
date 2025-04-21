@@ -1,5 +1,5 @@
 from guacs import (
-    trace_rays,
+    # trace_rays,
     trace_beams,
     Config,
     ProgConfig,

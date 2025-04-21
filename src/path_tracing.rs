@@ -170,7 +170,7 @@ impl Ray {
         c_i: &f64,
         c_i1: &f64,
         g_i: &f64,
-        depth_dir: &mut f64,
+        depth_dir: &f64,
         depth_step: &f64,
     ) -> DirChange {
         if (self.ray_param * *c_i1).abs() < 1.0 {
@@ -192,8 +192,6 @@ impl Ray {
         } else {
             // Set depth to same value as ray is turning in this layer of medium
             self.depth_vals[self.ray_iter + 1] = self.depth_vals[self.ray_iter];
-            // reverse depth direction for turn
-            *depth_dir = -*depth_dir;
             // Calculate range and time steps for turning ray
             self.range_vals[self.ray_iter + 1] = self.range_vals[self.ray_iter]
                 + 2.0 * (1.0 - (self.ray_param * *c_i).powi(2)).sqrt() / (self.ray_param * g_i);
@@ -260,9 +258,9 @@ impl Ray {
             // calculate local sound speed gradient
             g_i = (c_i1 - c_i) / prog_config.depth_step;
             // iterate depth step. This function will update value of c_i and depth_dir as required
-            match ray.update_iteration(&c_i, &c_i1, &g_i, &mut depth_dir, &prog_config.depth_step) {
+            match ray.update_iteration(&c_i, &c_i1, &g_i, &depth_dir, &prog_config.depth_step) {
                 DirChange::KeepDir => c_i = c_i1,
-                DirChange::ChangeDir => (),
+                DirChange::ChangeDir => depth_dir = -depth_dir,
             };
 
             // Check for intersections on all bodies in simulation
