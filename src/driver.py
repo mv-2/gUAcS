@@ -8,6 +8,8 @@ from guacs import (
     Body,
     # HalfSpace,
     Ssp,
+    Ray,
+    Beam,
 )
 import numpy as np
 from scipy.interpolate import splev, splrep
@@ -61,6 +63,10 @@ def plot_environment(cfg_file: Config) -> list:
     return [fig, ax_rays, ax_ssp, ax_g]
 
 
+def plot_pq(beam: Beam):
+    fig, ax = plt.subplots(1, 2)
+
+
 def plot_rays(cfg_file: Config, rays: list):
     fig, ax_rays, ax_ssp, ax_g = plot_environment(cfg_file)
 
@@ -112,7 +118,7 @@ if __name__ == "__main__":
             range_pos=0.0,
             depth_pos=1000.0,
             ray_fan_limits=(-0.3, 0.3),
-            n_rays=100,
+            n_rays=1,
             source_level=150,
             frequency=500,
         )

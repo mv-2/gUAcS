@@ -74,9 +74,14 @@ impl RayInit {
         init_sound_speed: f64,
         prog_config: &ProgConfig,
     ) -> Self {
-        let init_ang: f64 = source.ray_fan_limits[0]
-            + (ray_id as f64) * (source.ray_fan_limits[1] - source.ray_fan_limits[0])
-                / (source.n_rays as f64 - 1_f64);
+        let init_ang: f64 = match source.n_rays > 1 {
+            true => {
+                source.ray_fan_limits[0]
+                    + (ray_id as f64) * (source.ray_fan_limits[1] - source.ray_fan_limits[0])
+                        / (source.n_rays as f64 - 1_f64)
+            }
+            false => source.ray_fan_limits[0],
+        };
 
         RayInit {
             range_pos: source.range_pos,

@@ -14,8 +14,6 @@ pub struct Beam {
     pub p_vals: Vec<Complex64>,
     // #[pyo3(get, set)]
     pub q_vals: Vec<Complex64>,
-    // #[pyo3(get, set)]
-    pub eps_vals: Vec<Complex64>,
 }
 
 impl Beam {
@@ -25,10 +23,9 @@ impl Beam {
             central_ray: Ray::init_from_cfgs(init_source, prog_config),
             p_vals: vec![Complex64::ZERO; prog_config.max_it + 1],
             q_vals: vec![Complex64::ZERO; prog_config.max_it + 1],
-            eps_vals: vec![Complex64::ZERO; prog_config.max_it + 1],
         };
         bm.q_vals[0] = Complex64::new(0.0, 1.0 / init_source.init_sound_speed);
-        bm.q_vals[0] = Complex64::new(1.0, 0.0);
+        bm.p_vals[0] = Complex64::new(1.0, 0.0);
         bm
     }
 
@@ -87,6 +84,7 @@ impl Beam {
                     depth_dir = -depth_dir;
                 }
             };
+            // update c_i+2
             c_i2 = ssp.interp_sound_speed(
                 beam.central_ray.depth_vals[beam.central_ray.ray_iter + 1]
                     + 2.0 * depth_dir * prog_config.depth_step,
@@ -172,7 +170,6 @@ impl Beam {
     /// Remove unneeded empty cells
     pub fn truncate_beam(&mut self) {
         self.central_ray.truncate_ray();
-        self.eps_vals.truncate(self.central_ray.ray_iter + 1);
         self.q_vals.truncate(self.central_ray.ray_iter + 1);
         self.p_vals.truncate(self.central_ray.ray_iter + 1);
     }
