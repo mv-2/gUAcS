@@ -3,8 +3,9 @@ pub mod beam_tracing;
 pub mod interface;
 pub mod math_util;
 pub mod path_tracing;
+use rayon::prelude::*;
 
-use crate::beam_tracing::{trace_beams, Beam};
+use crate::beam_tracing::{trace_beams, PyBeam};
 use crate::interface::*;
 use crate::path_tracing::{trace_rays, Body, Ray, Ssp};
 
@@ -17,9 +18,12 @@ fn python_rays(config: Config) -> PyResult<Vec<Ray>> {
 
 #[pyfunction]
 #[pyo3(name = "trace_beams")]
-fn python_beams(config: Config) -> PyResult<Vec<Beam>> {
+fn python_beams(config: Config) -> PyResult<Vec<PyBeam>> {
     // silly wrapper for python stuff
-    Ok(trace_beams(config))
+    Ok(trace_beams(config)
+        .par_iter()
+        .map(|bm| PyBeam::from_beam(bm))
+        .collect())
 }
 
 #[pymodule]
@@ -34,6 +38,6 @@ fn guacs(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Body>()?;
     // m.add_class::<HalfSpace>()?;
     m.add_class::<Ray>()?;
-    m.add_class::<Beam>()?;
+    m.add_class::<PyBeam>()?;
     Ok(())
 }

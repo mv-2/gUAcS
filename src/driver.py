@@ -9,7 +9,7 @@ from guacs import (
     # HalfSpace,
     Ssp,
     Ray,
-    Beam,
+    PyBeam,
 )
 import numpy as np
 from scipy.interpolate import splev, splrep
@@ -63,8 +63,25 @@ def plot_environment(cfg_file: Config) -> list:
     return [fig, ax_rays, ax_ssp, ax_g]
 
 
-def plot_pq(beam: Beam):
+def plot_pq(beam: PyBeam):
     fig, ax = plt.subplots(1, 2)
+    ax[0].plot(beam.p_re, beam.p_im)
+    ax[0].scatter(beam.p_re[0], beam.p_im[0])
+    ax[0].set_title("$p$")
+    ax[0].set_xlabel("Real")
+    ax[0].set_ylabel("Imaginary")
+    ax[0].set_ylim([-1, 1])
+    ax[0].set_xlim([-1, 1])
+
+    ax[1].plot(beam.q_re, beam.q_im)
+    ax[1].scatter(beam.q_re[0], beam.q_im[0])
+    ax[0].set_title("$q$")
+    ax[1].set_xlabel("Real")
+    ax[1].set_ylabel("Imaginary")
+    ax[1].set_ylim([-1e-3, 1e-3])
+    ax[1].set_xlim([-1e-3, 1e-3])
+
+    plt.show()
 
 
 def plot_rays(cfg_file: Config, rays: list):
@@ -117,8 +134,8 @@ if __name__ == "__main__":
         SourceConfig(
             range_pos=0.0,
             depth_pos=1000.0,
-            ray_fan_limits=(-0.3, 0.3),
-            n_rays=1,
+            ray_fan_limits=(-0.2, 0.2),
+            n_rays=100,
             source_level=150,
             frequency=500,
         )
@@ -178,4 +195,5 @@ if __name__ == "__main__":
     rays = [bm.central_ray for bm in beams]
     rays = fix_rays(rays)
     plot_rays(config, rays)
+    plot_pq(beams[99])
     # animate_propagation(config, rays, 10)

@@ -4,16 +4,52 @@ use num::complex::Complex64;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 
-// Stores Beam propagation
+/// Stores Beam propagation
+#[derive(Clone)]
+pub struct Beam {
+    pub central_ray: Ray,
+    pub p_vals: Vec<Complex64>,
+    pub q_vals: Vec<Complex64>,
+}
+
+/// Interface to python as Complex64 has no pyo3 type for conversion
 #[pyclass]
 #[derive(Debug)]
-pub struct Beam {
+pub struct PyBeam {
     #[pyo3(get, set)]
     pub central_ray: Ray,
-    // #[pyo3(get, set)]
-    pub p_vals: Vec<Complex64>,
-    // #[pyo3(get, set)]
-    pub q_vals: Vec<Complex64>,
+    #[pyo3(get, set)]
+    pub p_re: Vec<f64>,
+    #[pyo3(get, set)]
+    pub q_re: Vec<f64>,
+    #[pyo3(get, set)]
+    pub p_im: Vec<f64>,
+    #[pyo3(get, set)]
+    pub q_im: Vec<f64>,
+}
+
+impl PyBeam {
+    /// Initialise [`PyBeam`] from [`Beam`]
+    pub fn from_beam(beam: &Beam) -> PyBeam {
+        // bad and not good
+        let q_re: Vec<f64> = beam.q_vals.iter().map(|&q| q.re).collect();
+        let q_im: Vec<f64> = beam.q_vals.iter().map(|&q| q.im).collect();
+        let p_re: Vec<f64> = beam.p_vals.iter().map(|&p| p.re).collect();
+        let p_im: Vec<f64> = beam.p_vals.iter().map(|&p| p.im).collect();
+        PyBeam {
+            central_ray: beam.central_ray.clone(),
+            p_re,
+            q_re,
+            p_im,
+            q_im,
+        }
+    }
+}
+
+// Enum to set solver method for p-q equations
+enum SolverMethod {
+    RungeKutta4,
+    Radau3,
 }
 
 impl Beam {
@@ -65,7 +101,15 @@ impl Beam {
             // calculate local sound speed gradient
             g_i = (c_i1 - c_i) / prog_config.depth_step;
             // Update p-q equations
-            beam.update_pq(&c_i, &c_i1, &c_im1, &c_i2, &g_i, &prog_config.depth_step);
+            beam.update_pq(
+                &c_i,
+                &c_i1,
+                &c_im1,
+                &c_i2,
+                &g_i,
+                &prog_config.depth_step,
+                SolverMethod::RungeKutta4,
+            );
             // iterate depth step. Match statement to update ssp variables as required
             match beam.central_ray.update_iteration(
                 &c_i,
@@ -125,6 +169,27 @@ impl Beam {
         c_i2: &f64,
         g_i: &f64,
         depth_step: &f64,
+        method: SolverMethod,
+    ) {
+        match method {
+            SolverMethod::RungeKutta4 => {
+                self.update_pq_rk4(c_i, c_i1, c_im1, c_i2, g_i, depth_step);
+            }
+            SolverMethod::Radau3 => {
+                todo!();
+            }
+        }
+    }
+
+    /// RK4 solver
+    fn update_pq_rk4(
+        &mut self,
+        c_i: &f64,
+        c_i1: &f64,
+        c_im1: &f64,
+        c_i2: &f64,
+        g_i: &f64,
+        depth_step: &f64,
     ) {
         let c_i1_2: f64 = (c_i1 + c_i) / 2.0;
         // Calculate arc length in last depth step
@@ -165,6 +230,11 @@ impl Beam {
             + arc_step * (k_n1[0] + 2.0 * (k_n2[0] + k_n3[0]) + k_n4[0]) / 6.0;
         self.p_vals[self.central_ray.ray_iter + 1] = self.p_vals[self.central_ray.ray_iter]
             + arc_step * (k_n1[1] + 2.0 * (k_n2[1] + k_n3[1]) + k_n4[1]) / 6.0;
+    }
+
+    /// Radau3 Solver
+    fn update_pq_radau3() {
+        todo!();
     }
 
     /// Remove unneeded empty cells
