@@ -188,7 +188,7 @@ impl Beam {
                 self.update_pq_rk4(c_i, c_i1, c_im1, c_i2, g_i, depth_step);
             }
             SolverMethod::Radau3IA => {
-                self.update_pq_radau3IA(c_i, c_i1, c_im1, c_i2, g_i, depth_step);
+                self.update_pq_radau3_ia(c_i, c_i1, c_im1, c_i2, g_i, depth_step);
             }
             SolverMethod::BackEuler => {
                 self.update_pq_back_euler(c_i, c_i1, c_i2, g_i, depth_step);
@@ -248,7 +248,7 @@ impl Beam {
     }
 
     /// Radau3IA Solver
-    fn update_pq_radau3IA(
+    fn update_pq_radau3_ia(
         &mut self,
         c_i: &f64,
         c_i1: &f64,
