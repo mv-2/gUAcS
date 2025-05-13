@@ -49,7 +49,18 @@ impl PyBeam {
 // Enum to set solver method for p-q equations
 enum SolverMethod {
     RungeKutta4,
-    Radau3,
+    Radau3IA,
+    BackEuler,
+}
+impl SolverMethod {
+    pub fn from_string(str: &str) -> SolverMethod {
+        match str {
+            "BackwardEuler" => SolverMethod::BackEuler,
+            "RungeKutta4" => SolverMethod::RungeKutta4,
+            "Radau3IA" => SolverMethod::Radau3IA,
+            _ => panic!("Buffoon"),
+        }
+    }
 }
 
 impl Beam {
@@ -73,6 +84,7 @@ impl Beam {
         ssp: &Ssp,
     ) -> Beam {
         let mut beam: Beam = Beam::init_from_configs(init_source, prog_config);
+        let pq_solver: SolverMethod = SolverMethod::from_string(&prog_config.pq_solver[..]);
         let mut c_i: f64;
         let mut c_i1: f64;
         let mut c_i2: f64;
@@ -108,7 +120,7 @@ impl Beam {
                 &c_i2,
                 &g_i,
                 &prog_config.depth_step,
-                SolverMethod::RungeKutta4,
+                &pq_solver,
             );
             // iterate depth step. Match statement to update ssp variables as required
             match beam.central_ray.update_iteration(
@@ -169,14 +181,17 @@ impl Beam {
         c_i2: &f64,
         g_i: &f64,
         depth_step: &f64,
-        method: SolverMethod,
+        method: &SolverMethod,
     ) {
         match method {
             SolverMethod::RungeKutta4 => {
                 self.update_pq_rk4(c_i, c_i1, c_im1, c_i2, g_i, depth_step);
             }
-            SolverMethod::Radau3 => {
-                todo!();
+            SolverMethod::Radau3IA => {
+                self.update_pq_radau3IA(c_i, c_i1, c_im1, c_i2, g_i, depth_step);
+            }
+            SolverMethod::BackEuler => {
+                self.update_pq_back_euler(c_i, c_i1, c_i2, g_i, depth_step);
             }
         }
     }
@@ -232,9 +247,86 @@ impl Beam {
             + arc_step * (k_n1[1] + 2.0 * (k_n2[1] + k_n3[1]) + k_n4[1]) / 6.0;
     }
 
-    /// Radau3 Solver
-    fn update_pq_radau3() {
-        todo!();
+    /// Radau3IA Solver
+    fn update_pq_radau3IA(
+        &mut self,
+        c_i: &f64,
+        c_i1: &f64,
+        c_im1: &f64,
+        c_i2: &f64,
+        g_i: &f64,
+        depth_step: &f64,
+    ) {
+        let arc_step: f64 = ((self.central_ray.ray_param * c_i1 + 1.0)
+            * (self.central_ray.ray_param * c_i - 1.0)
+            / ((self.central_ray.ray_param * c_i1 - 1.0)
+                * (self.central_ray.ray_param * c_i + 1.0)))
+            .abs()
+            .ln()
+            / (2.0 * g_i * self.central_ray.ray_param);
+        let c_i2_3 = (c_i1 + c_i1 + c_i) / 3.0;
+        let c_nn_i: f64 =
+            -self.central_ray.ray_param * c_i * (c_i1 - 2.0 * c_i + c_im1) / depth_step.powi(2);
+        let c_nn_i1: f64 =
+            -self.central_ray.ray_param * c_i1 * (c_i2 - 2.0 * c_i1 + c_i) / depth_step.powi(2);
+        let c_nn_i2_3: f64 = (c_nn_i1 + c_nn_i1 + c_nn_i) / 3.0;
+        let denom_i: f64 = 25_f64 * c_nn_i2_3 + c_i2_3;
+        let cmat_i_11: f64 = 1_f64 + 15_f64 * c_nn_i2_3 / denom_i;
+        let cmat_i_12: f64 =
+            4_f64 * c_i.powi(2) / (arc_step * c_nn_i1) - 3_f64 * c_i2_3.powi(2) / denom_i;
+        let cmat_i_21: f64 = 4_f64 / (arc_step * c_i) + 3_f64 * c_nn_i2_3 / (c_i2_3 * denom_i);
+        let cmat_i_22: f64 = 1_f64 + 15_f64 * c_nn_i2_3 / denom_i;
+        let dmat_i_11: f64 = -1_f64 - 15_f64 * c_nn_i2_3 / denom_i;
+        let dmat_i_12: f64 = 3_f64 * c_i2_3.powi(2) / denom_i;
+        let dmat_i_21: f64 = -3_f64 * c_nn_i2_3 / (c_i2_3 * denom_i);
+        let dmat_i_22: f64 = -1_f64 - 15_f64 * c_nn_i2_3 / denom_i;
+        let coeff: f64 = 4_f64 / (arc_step * (cmat_i_11 * cmat_i_22 - cmat_i_12 * cmat_i_21));
+        let q_j: Complex64 = self.q_vals[self.central_ray.ray_iter];
+        let p_j: Complex64 = self.p_vals[self.central_ray.ray_iter];
+        let kn1_1: Complex64 = coeff
+            * (q_j * (cmat_i_22 * dmat_i_11 - cmat_i_12 * dmat_i_21)
+                + p_j * (cmat_i_22 * dmat_i_12 - cmat_i_12 * dmat_i_22));
+        let kn1_2: Complex64 = coeff
+            * (q_j * (-cmat_i_21 * dmat_i_11 + cmat_i_11 * dmat_i_21)
+                + p_j * (-cmat_i_21 * dmat_i_12 + cmat_i_11 * dmat_i_22));
+        let kn2_1: Complex64 = (-5_f64 * c_nn_i2_3 * (12_f64 * q_j / arc_step + 3_f64 * kn1_1)
+            + c_i2_3.powi(2) * (12_f64 * p_j / arc_step + 3_f64 * kn1_2))
+            / denom_i;
+        let kn2_2: Complex64 = (-c_nn_i2_3 * (12_f64 * q_j / arc_step + 3_f64 * kn1_1) / c_i2_3
+            - 5_f64 * c_i2_3.powi(2) * (12_f64 * p_j / arc_step + 3_f64 * kn1_2))
+            / denom_i;
+        self.q_vals[self.central_ray.ray_iter + 1] =
+            q_j + arc_step * (kn1_1 + 3_f64 * kn2_1) / 4_f64;
+        self.p_vals[self.central_ray.ray_iter + 1] =
+            p_j + arc_step * (kn1_2 + 3_f64 * kn2_2) / 4_f64;
+    }
+
+    /// Backward Euler solver
+    fn update_pq_back_euler(
+        &mut self,
+        c_i: &f64,
+        c_i1: &f64,
+        c_i2: &f64,
+        g_i: &f64,
+        depth_step: &f64,
+    ) {
+        let arc_step: f64 = ((self.central_ray.ray_param * c_i1 + 1.0)
+            * (self.central_ray.ray_param * c_i - 1.0)
+            / ((self.central_ray.ray_param * c_i1 - 1.0)
+                * (self.central_ray.ray_param * c_i + 1.0)))
+            .abs()
+            .ln()
+            / (2.0 * g_i * self.central_ray.ray_param);
+        let c_nn_i1: f64 =
+            -self.central_ray.ray_param * c_i1 * (c_i2 - 2.0 * c_i1 + c_i) / depth_step.powi(2);
+        let coeff: f64 = c_i1 / (1.0 - arc_step.powi(2) * c_nn_i1);
+        self.q_vals[self.central_ray.ray_iter + 1] = coeff
+            * (self.q_vals[self.central_ray.ray_iter]
+                + arc_step * c_i1 * self.p_vals[self.central_ray.ray_iter]);
+        self.p_vals[self.central_ray.ray_iter + 1] = coeff
+            * (self.p_vals[self.central_ray.ray_iter]
+                - arc_step * c_nn_i1 * self.q_vals[self.central_ray.ray_iter])
+            / c_i1.powi(2);
     }
 
     /// Remove unneeded empty cells

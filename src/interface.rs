@@ -28,6 +28,8 @@ pub struct ProgConfig {
     pub min_range: f64,
     #[pyo3(get, set)]
     pub output_path: String,
+    #[pyo3(get, set)]
+    pub pq_solver: String,
 }
 
 /// Stores environmental constant data for simulation (SSP and density profile information)
@@ -148,6 +150,7 @@ impl ProgConfig {
         max_range: f64,
         min_range: f64,
         output_path: String,
+        pq_solver: String,
     ) -> Self {
         ProgConfig {
             depth_step,
@@ -155,6 +158,7 @@ impl ProgConfig {
             max_range,
             min_range,
             output_path,
+            pq_solver,
         }
     }
 }

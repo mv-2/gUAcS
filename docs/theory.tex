@@ -228,7 +228,7 @@ Now consider this form based on the form of the $p-q$ equations. Let $j$ define 
 \begin{align*}
   y_{k}&\equiv\bm{x}_k\\ 
   t_k&\equiv s_k \\
-  f(t_k, y_k)&\equiv\dot{\bm{x}}_k=\begin{bmatrix} 0 & c(s_k) \\ \frac{-c_{nn}|_{s=s_k}}{c^2(s_k)} & 0\end{bmatrix}\begin{bmatrix} q_k \\ p_k\end{bmatrix} \\ 
+  f(t_k, y_k)&\equiv\dot{\bm{x}}_k=\begin{bmatrix} 0 & c(s_k) \\ \frac{-c_{nn}|_{s=s_k}}{c^2(s_k)} & 0\end{bmatrix}\begin{bmatrix} q_k \\ p_k\end{bmatrix} \\ {}
   \implies k_{n1} &= \begin{bmatrix} 0 & c(s_j) \\ \frac{-c_{nn, (j)}}{c^2(s_j)} & 0\end{bmatrix}\begin{bmatrix} q_j \\ p_j\end{bmatrix} \\
   \implies k_{n2} &= \begin{bmatrix} 0 & c(s_{j+\frac{1}{2}}) \\ \frac{-c_{nn, (j+\frac{1}{2})}}{c^2(s_{j + \frac{1}{2}})} & 0\end{bmatrix}\left(\begin{bmatrix} q_j \\ p_j\end{bmatrix} + \frac{1}{2}k_{n1} \right) \\
   \implies k_{n3} &= \begin{bmatrix} 0 & c(s_{j+\frac{1}{2}}) \\ \frac{-c_{nn, (j+\frac{1}{2})}}{c^2(s_{j + \frac{1}{2}})} & 0\end{bmatrix}\left(\begin{bmatrix} q_j \\ p_j\end{bmatrix} + \frac{1}{2}k_{n2} \right) \\
@@ -243,41 +243,139 @@ Where:
                           &=  -\xi\cdot (c_i + c_{i+1})\cdot\left(\frac{(c_{i+2} + c_{i+1})-2\cdot (c_{i} + c_{i+1}) + (c_{i-1} + c_{i})}{4\cdot\Delta z^2}\right)\\
   \implies c_{nn, (j+\frac{1}{2})} &= -\xi\cdot (c_{i} + c_{i+1})\cdot\left(\frac{c_{i+2} - c_{i+1}-c_{i} + c_{i-1}}{4\cdot\Delta z^2}\right)\\
 \end{align*}
-\subsubsection{Implicit ODE Solver}
-In order to numerically solve these equations, an implicit solver is required. In order to derive this implicit solution, the equations must be converted to matrix form.
+\subsubsection{Backward Euler}
 \begin{align*}
-  \textrm{let}\;\;\bm{x}=\begin{bmatrix}q \\ s \end{bmatrix}\\
-  \therefore \dot{\bm{x}}=\begin{bmatrix} \frac{dq}{ds} \\ \frac{dp}{ds}\end{bmatrix}\\
-  \dot{\bm{x}} = \begin{bmatrix} 0 & c(s) \\ \frac{-c_{nn}}{c^2(s)} & 0\end{bmatrix}\bm{x}
+  y_{k+1} &= y_k + h\cdot f(t_{k+1}, y_{k+1}) \\
+  y_k &\equiv \bm{x}_k\\
+  t &\equiv s\\
+  \implies \bm{x}_{i+1} &= \bm{x}_n + \Delta s\dot{\bm{x}}_{n+1} \\ 
+  \begin{bmatrix} q_{i+1} \\ p_{i+1} \end{bmatrix} &= \begin{bmatrix} q_{i} \\ p_{i} \end{bmatrix} + \Delta s \begin{bmatrix} 0 & c(s_{i+1}) \\ \frac{-c_{nn,i+1}}{c^2(s_{i+1})} & 0\end{bmatrix}\begin{bmatrix} q_{i+1} \\ p_{i+1} \end{bmatrix} \\
+  \begin{bmatrix} q_{i+1} \\ p_{i+1} \end{bmatrix} &= \begin{bmatrix} q_{i} \\ p_{i} \end{bmatrix} + \begin{bmatrix} p_{i+1}\cdot\Delta s\cdot c(s_{i+1}) \\ q_{i+1}\cdot\Delta s\cdot\frac{-c_{nn,i+1}}{c^2(s_{i+1})} \end{bmatrix}\\
+  \begin{bmatrix} q_{i+1} \\ p_{i+1} \end{bmatrix} - \begin{bmatrix} p_{i+1}\cdot\Delta s\cdot c(s_{i+1}) \\ q_{i+1}\cdot\Delta s\cdot\frac{-c_{nn,i+1}}{c^2(s_{i+1})} \end{bmatrix} &= \begin{bmatrix} q_{i} \\ p_{i} \end{bmatrix} \\
+  \begin{bmatrix} 1 & -\Delta s\cdot c(s_{i+1}) \\ -\Delta s\cdot\frac{-c_{nn,i+1}}{c^2(s_{i+1})} & 1 \end{bmatrix} \begin{bmatrix}q_{i+1} \\ p_{i+1} \end{bmatrix} &= \begin{bmatrix} q_i \\ p_i \end{bmatrix}
 \end{align*}
-For a good implicit method, Radau3 is selected. This method is defined by the Butcher Tableu:
+To solve this system of equations take the inverse of the matrix to make $\dot{\bm{x}}_{i+1}$ the subject of the equation.
+\begin{align*}
+  let A &= \begin{bmatrix} 1 & -\Delta s\cdot c(s_{i+1}) \\ \Delta s\cdot\frac{c_{nn,i+1}}{c^2(s_{i+1})} & 1 \end{bmatrix}\\
+  \therefore A^{-1} &= \frac{c(s_{i+1})}{1 - \Delta s^2\cdot c_{nn, i+1}} \begin{bmatrix} 1 & \Delta s\cdot c(s_{i+1}) \\ -\Delta s\cdot\frac{c_{nn,i+1}}{c^2(s_{i+1})} & 1 \end{bmatrix} \\
+  \implies \begin{bmatrix} q_{i+1} \\ p_{i+1} \end{bmatrix} &= A^{-1}\begin{bmatrix}q_{i} \\ p_i \end{bmatrix}\\
+  \therefore \begin{bmatrix} q_{i+1} \\ p_{i+1} \end{bmatrix} &= \frac{c(s_{i+1})}{1 - \Delta s^2\cdot c_{nn, i+1}}\begin{bmatrix} q_{i} + \Delta s\cdot c(s_{i+1})\cdot p_{i} \\ p_i -\Delta s\cdot \frac{c_{nn,i+1}}{c^2(s_{i+1})} q_i\end{bmatrix}
+\end{align*}
+\subsubsection{3rd Order Radau IA}
+The Butcher Tableu of Radau IA is as follows:
 \begin{center}
   \begin{tabular}{c|c c}
-    $\frac{1}{3}$ & $\frac{5}{12}$ & $-\frac{1}{12}$ \\
-    $1$ & $\frac{3}{4}$ & $\frac{1}{4}$ \\
+    $0$ & $\frac{1}{4}$ & $-\frac{1}{4}$ \\
+    $\frac{2}{3}$ & $\frac{1}{4}$ & $\frac{5}{12}$ \\
     \hline
-                & $\frac{3}{4}$ & $\frac{1}{4}$
+                & $\frac{1}{4}$ & $\frac{3}{4}$
   \end{tabular}
 \end{center}
-Such that:
 \begin{align*}
-  y_{n+1} = y_n + \frac{h}{4}\left(k_{n1} + 3\cdot k_{n2} \right)\\
-  k_{n1}=f(t_n + \frac{\Delta t}{3}, y_n + \frac{5}{12}\cdot k_{n1} -\frac{1}{12}\cdot k_{n2})\\
-  k_{n2}=f(t_n + \frac{2\cdot\Delta t}{3}, y_n + \frac{3}{4}\cdot k_{n1} -\frac{1}{4}\cdot k_{n2})
+  \implies y_{n+1} &= y_{n} + \frac{\Delta t}{4}\cdot (k_{n1} + 3\cdot k_{n2})\\
+  k_{n1} &= f\left(t_n, y_n + \frac{\Delta t}{4}({k_{n1} - k_{n2}})\right) \\
+  k_{n2} &= f\left(t_n + \frac{2\cdot\Delta t}{3}, y_n + \frac{\Delta t}{12}({3\cdot k_{n1} + 5\cdot k_{n2}})\right) \\
+  y_{j}&\equiv\begin{bmatrix}q_j \\ s_j \end{bmatrix} \\
+  t&\equiv s\\
+  f(t_n, y_n)&\equiv \dot{\bm{x}}_j=\begin{bmatrix} 0 & c_j \\ \frac{-c_{nn, j}}{c^2_j} & 0\end{bmatrix}\begin{bmatrix} q_j \\ p_j\end{bmatrix}
 \end{align*}
-With this known, employ the calculated forms for the $p-q$ equations.
+Now solve:
 \begin{align*}
-  y_{k}&\equiv\bm{x}_k\\ 
-  t_k&\equiv s_k \\
-  f(t_j, y_j)&\equiv\dot{\bm{x}}_j=\begin{bmatrix} 0 & c(s_j) \\ \frac{-c_{nn}|_{s=s_j}}{c^2(s_j)} & 0\end{bmatrix}\begin{bmatrix} q_j \\ p_j\end{bmatrix}\\
-  \implies k_{n1} &= \dot{\bm{x}}_{j + \frac{1}{3}} = \begin{bmatrix} 0 & c(s_{j + \frac{1}{3}}) \\ \frac{-c_{nn(j+\frac{1}{3})}}{c^2(s_{j+\frac{1}{3}})} & 0\end{bmatrix}\begin{bmatrix} q_{j+\frac{1}{3}} \\ p_{j\frac{1}{3}} \end{bmatrix}\\ 
+  \bm{x}_{j+1} &= \bm{x}_j + \frac{\Delta s}{4}\cdot\left(k_{n1} + 3\cdot k_{n2}\right)\\
+  k_{n1} &= \begin{bmatrix} 0 & c_j \\ \frac{-c_{nn, j}}{c^2_j} & 0\end{bmatrix}\left(\begin{bmatrix} q_j \\ p_j\end{bmatrix} + \frac{\Delta s}{4}\cdot(k_{n1} - \cdot k_{n2}) \right)\\
+  k_{n1} &= A_j\left(\bm{x}_j + \frac{\Delta s}{4}\cdot(k_{n1} - \cdot k_{n2}) \right)\\
+  k_{n2} &= \begin{bmatrix} 0 & c_{j + \frac{2}{3}} \\ \frac{-c_{nn, j + \frac{2}{3}}}{c^2_{j+\frac{2}{3}}} & 0\end{bmatrix}\left(\begin{bmatrix} q_{j+\frac{2}{3}} \\ p_{j+\frac{2}{3}}\end{bmatrix} + \frac{\Delta s}{12}\cdot(3\cdot k_{n1} + 5\cdot k_{n2}) \right)\\
+  k_{n2} &= A_{j+\frac{2}{3}}\left(\bm{x}_j + \frac{\Delta s}{12}\cdot(3\cdot k_{n1} + 5\cdot k_{n2}) \right)\\
 \end{align*}
+Consider solving for $k_{n1}$ and $k_{n2}$.
+\begin{align*}
+  k_{n1} &= A_j\left(\bm{x}_j + \frac{\Delta s}{4}\cdot(k_{n1} - \cdot k_{n2}) \right)\\
+  \implies A_j^{-1}k_{n1} &= \bm{x}_j + \frac{\Delta s}{4}\cdot(k_{n1} - k_{n2})\\
+  \therefore k_{n2} &= \frac{4}{\Delta s}\bm{x}_j + k_{n1} - \frac{4}{\Delta s}A_j^{-1}k_{n1} 
+\end{align*}
+\begin{align*}
+  k_{n2} &= A_{j+\frac{2}{3}}\left(\bm{x}_j + \frac{\Delta t}{12}\cdot(3\cdot k_{n1} + 5\cdot k_{n2}) \right)\\
+  \implies A_{j+\frac{2}{3}}^{-1}k_{n2} &= \bm{x}_j + \frac{\Delta s}{12}\cdot(3\cdot k_{n1} + 5\cdot k_{n2})\\
+  \left(\frac{12}{\Delta s}A_{j+\frac{2}{3}}^{-1} - 5\cdot\mathbb{I}\right)k_{n2} &= \frac{12}{\Delta s}\bm{x}_j + 3\cdot k_{n1}\\
+  \mathrm{let\;\;} B_{j+\frac{2}{3}} &= A_{j+\frac{2}{3}}^{-1}-5\cdot\mathbb{I}\\
+  \implies B_{j+\frac{2}{3}} k_{n2} &= \frac{12}{\Delta s}\bm{x}_j + 3\cdot k_{n1}\\
+  \therefore k_{n2} &= B_{j+\frac{2}{3}}^{-1}\left(\frac{12}{\Delta s}\bm{x}_j + 3\cdot k_{n1} \right)
+\end{align*}
+Now solve for $k_{n1}$.
+\begin{align*}
+  \frac{4}{\Delta s}\bm{x}_j + k_{n1} - \frac{4}{\Delta s}A_j^{-1}k_{n1}  &= B_{j+\frac{2}{3}}^{-1}\left(\frac{12}{\Delta s}\bm{x}_j + 3\cdot k_{n1} \right)\\
+   \frac{4}{\Delta s}\bm{x}_j + \left(\mathbb{I} -\frac{4}{\Delta s}A_j^{-1}\right)k_{n1} &= B_{j+\frac{2}{3}}^{-1}\left(\frac{12}{\Delta s}\bm{x}_j + 3\cdot k_{n1} \right)\\
+   \left(\mathbb{I} - \frac{4}{\Delta s}A_j^{-1} - 3\cdot B_{j+\frac{2}{3}}^{-1}\right)k_{n1} &= \left(\frac{12}{\Delta s} B_{j+\frac{2}{3}}^{-1} - \frac{4}{\Delta s}\mathbb{I}\right)\bm{x}_j\\
+   \mathrm{let\;\;} C_j &= \mathbb{I} - \frac{4}{\Delta s}A_j^{-1} - 3\cdot B_{j+\frac{2}{3}}^{-1}\\
+   \therefore k_{n1} &= C_j^{-1}\left(3\cdot B_{j+\frac{2}{3}}^{-1} - \mathbb{I}\right)\frac{4}{\Delta s}\bm{x}_j
+\end{align*}
+Wahoo.\\
+Now figure out the details for the terms $A$, $B$ and $C$ to allow for these equations to be implemented.
+\begin{align*}
+  A_j &= \begin{bmatrix} 0 & c_j  \\ -\frac{c_{nn, j}}{c_j^2} & 0\end{bmatrix} \\
+  A_j^{-1} &= \frac{c_j}{c_{nn, j}}\begin{bmatrix} 0 & -c_j  \\ \frac{c_{nn, j}}{c_j^2} & 0\end{bmatrix} \\
+  \therefore A_j^{-1} &= \begin{bmatrix} 0 & -\frac{c^2_j}{c_{nn, j}}  \\ \frac{1}{c_j} & 0\end{bmatrix}\\
+  B_j &= A_j^{-1} - 5\cdot\mathbb{I}\\
+  B_j &= \begin{bmatrix} -5 & -\frac{c^2_j}{c_{nn, j}}  \\ \frac{1}{c_j} & -5 \end{bmatrix} \\
+  B_j^{-1} &= \frac{1}{25 + \frac{c_j}{c_{nn, j}}}\begin{bmatrix} -5 & \frac{c^2_j}{c_{nn, j}}  \\ -\frac{1}{c_j} & -5 \end{bmatrix} \\
+           &= \frac{c_{nn, j}}{25\cdot c_{nn, j} + c_j}\begin{bmatrix} -5 & \frac{c^2_j}{c_{nn, j}}  \\ -\frac{1}{c_j} & -5 \end{bmatrix}\\
+  \therefore B_j^{-1} &= \begin{bmatrix} -\frac{5\cdot c_{nn, j}}{25\cdot c_{nn, j} + c_j} & \frac{c^2_j}{25\cdot c_{nn, j} + c_j}  \\ -\frac{c_{nn, j}}{25\cdot c_j\cdot c_{nn, j} + c_j^2} & -\frac{5\cdot c_{nn, j}}{25\cdot c_{nn, j} + c_j} \end{bmatrix}\\
+  C_j &= \mathbb{I} - \frac{4}{\Delta s}A_j^{-1} - 3\cdot B_{j+\frac{2}{3}}^{-1}\\ 
+      &= \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix} - \begin{bmatrix} 0 & -\frac{4\cdot c^2_j}{\Delta s\cdot c_{nn, j}}  \\ \frac{4}{\Delta s\cdot c_j} & 0\end{bmatrix} - \begin{bmatrix} -\frac{15\cdot c_{nn, j+\frac{2}{3}}}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}} & \frac{3\cdot c^2_{j+\frac{2}{3}}}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}}  \\ -\frac{3\cdot c_{nn, j+\frac{2}{3}}}{25\cdot c_{j+\frac{2}{3}}\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}^2} & -\frac{15\cdot c_{nn, j+\frac{2}{3}}}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}} \end{bmatrix} \\
+  \therefore C_j &= \begin{bmatrix} 1 + \frac{15\cdot c_{nn, j+\frac{2}{3}}}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}} & \frac{4\cdot c^2_j}{\Delta s\cdot c_{nn, j}} - \frac{3\cdot c^2_{j+\frac{2}{3}}}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}} \\ \frac{4}{\Delta s\cdot c_j} + \frac{3\cdot c_{nn, j+\frac{2}{3}}}{25\cdot c_{j+\frac{2}{3}}\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}^2} & 1 + \frac{15\cdot c_{nn, j+\frac{2}{3}}}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}}\end{bmatrix}\\
+  \mathrm{let\;\;}C_j &= \begin{bmatrix} C^{(1, 1)}_{j} & C^{(1, 2)}_{j} \\ C^{(2, 1)}_{j} & C^{(2, 2)}_{j} \end{bmatrix}\\
+  C_j^{-1} &= \frac{1}{C^{(1, 1)}_{j}\cdot C^{(2, 2)}_{j} - C^{(1, 2)}_{j}\cdot C^{(2, 1)}_{j}}\begin{bmatrix} C^{(2, 2)}_{j} & -C^{(1, 2)}_{j} \\ -C^{(2, 1)}_{j} & C^{(1, 1)}_{j} \end{bmatrix}\\
+\end{align*}
+Now calculate $k_{n1}$.
+\begin{align*}
+  k_{n1} &= C_j^{-1}\left(3\cdot B_{j+\frac{2}{3}}^{-1} - \mathbb{I}\right)\frac{4}{\Delta s}\bm{x}_j\\
+  \mathrm{let\;\;} D_j &= 3\cdot B_{j+\frac{2}{3}}^{-1} - \mathbb{I}\\
+  \therefore D_j &= \begin{bmatrix} -\frac{15\cdot c_{nn, j+\frac{2}{3}}}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}} - 1 & \frac{3\cdot c^2_{j+\frac{2}{3}}}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}}  \\ -\frac{3\cdot c_{nn, j+\frac{2}{3}}}{25\cdot c_{j+\frac{2}{3}}\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}^2} & -\frac{15\cdot c_{nn, j+\frac{2}{3}}}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}} - 1 \end{bmatrix} \\ 
+  k_{n1} &= \frac{1}{C^{(1, 1)}_{j}\cdot C^{(2, 2)}_{j} - C^{(1, 2)}_{j}\cdot C^{(2, 1)}_{j}}\begin{bmatrix} C^{(2, 2)}_{j} & -C^{(1, 2)}_{j} \\ -C^{(2, 1)}_{j} & C^{(1, 1)}_{j} \end{bmatrix}\begin{bmatrix} D^{(1, 1)}_j & D^{(1, 2)}_j \\ D^{(2, 1)}_j & D^{(2, 2)}_j \end{bmatrix} \begin{bmatrix} \frac{4\cdot q_j}{\Delta s} \\ \frac{4\cdot p_j}{\Delta s} \end{bmatrix}\\
+         &= \frac{1}{c^{(1, 1)}_{j}\cdot c^{(2, 2)}_{j} - c^{(1, 2)}_{j}\cdot c^{(2, 1)}_{j}}\begin{bmatrix} C^{(2, 2)}_j\cdot D^{(1, 1)}_j - C^{(1, 2)}_j\cdot D^{(2, 1)}_j & C^{(2, 2)}_j\cdot D^{(1, 2)}_j - C^{(1, 2)}_j\cdot D^{(2, 2)}_j \\ -C^{(2, 1)}_j\cdot D^{(1, 1)}_j + C^{(1, 1)}_j\cdot D^{(2, 1)}_j & -C^{(2, 1)}_j\cdot D^{(1, 2)}_j + C^{(1, 1)}_j\cdot D^{(2, 2)}_j \end{bmatrix}\begin{bmatrix} \frac{4\cdot q_j}{\Delta s} \\ \frac{4\cdot p_j}{\Delta s} \end{bmatrix}\\
+  \therefore k_{n1} &= \frac{4}{\Delta s\cdot \left(C^{(1, 1)}_{j}\cdot C^{(2, 2)}_{j} - C^{(1, 2)}_{j}\cdot C^{(2, 1)}_{j}\right)}\begin{bmatrix} q_j\cdot \left(C^{(2, 2)}_j\cdot D^{(1, 1)}_j - C^{(1, 2)}_j\cdot D^{(2, 1)}_j\right) + p_j\cdot\left(C^{(2, 2)}_j\cdot D^{(1, 2)}_j - C^{(1, 2)}_j\cdot D^{(2, 2)}_j\right) \\ q_j\cdot\left(-C^{(2, 1)}_j\cdot D^{(1, 1)}_j + C^{(1, 1)}_j\cdot D^{(2, 1)}_j\right) + p_j\cdot\left( -C^{(2, 1)}_j\cdot D^{(1, 2)}_j + C^{(1, 1)}_j\cdot D^{(2, 2)}_j\right) \end{bmatrix}
+\end{align*}
+Now calculate $k_{n2}$.
+\begin{align*}
+  k_{n2} &= B_{j+\frac{2}{3}}^{-1}\left(\frac{12}{\Delta s}\bm{x}_j + 3\cdot k_{n1} \right) \\
+         &= \begin{bmatrix} -\frac{5\cdot c_{nn, j+\frac{2}{3}}}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}} & \frac{c^2_{j+\frac{2}{3}}}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}}  \\ -\frac{c_{nn, j+\frac{2}{3}}}{25\cdot c_{j+\frac{2}{3}}\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}^2} & -\frac{5\cdot c_{nn, j+\frac{2}{3}}}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}} \end{bmatrix}\begin{bmatrix} \frac{12}{\Delta s} \cdot q_j + 3\cdot k_{n1}^{(1)} \\ \frac{12}{\Delta s} \cdot p_j + 3\cdot k_{n1}^{(2)} \end{bmatrix}\\
+  \therefore k_{n2} &= \begin{bmatrix} -\frac{5\cdot c_{nn, j+\frac{2}{3}}\cdot\left(\frac{12}{\Delta s} \cdot q_j + 3\cdot k_{n1}^{(1)} \right)}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}} + \frac{c^2_{j+\frac{2}{3}}\cdot\left(\frac{12}{\Delta s} \cdot p_j + 3\cdot k_{n1}^{(2)}  \right)}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}}  \\ -\frac{c_{nn, j+\frac{2}{3}}\cdot\left(\frac{12}{\Delta s} \cdot q_j + 3\cdot k_{n1}^{(1)} \right)}{25\cdot c_{j+\frac{2}{3}}\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}^2} - \frac{5\cdot c_{nn, j+\frac{2}{3}}\cdot \left(\frac{12}{\Delta s}p_j + 3\cdot k_{n1}^{(2)}  \right)}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}} \end{bmatrix}
+\end{align*}
+% \subsubsection{3rd Order Radau IIA}
+% In order to numerically solve these equations, an implicit solver is required. In order to derive this implicit solution, the equations must be converted to matrix form.
+% \begin{align*}
+%   \textrm{let}\;\;\bm{x}=\begin{bmatrix}q \\ s \end{bmatrix}\\
+%   \therefore \dot{\bm{x}}=\begin{bmatrix} \frac{dq}{ds} \\ \frac{dp}{ds}\end{bmatrix}\\
+%   \dot{\bm{x}} = \begin{bmatrix} 0 & c(s) \\ \frac{-c_{nn}}{c^2(s)} & 0\end{bmatrix}\bm{x}
+% \end{align*}
+% For a good implicit method, the 3rd order Radau IIA method is selected. This method is defined by the Butcher Tableu:
+% \begin{center}
+%   \begin{tabular}{c|c c}
+%     $\frac{1}{3}$ & $\frac{5}{12}$ & $-\frac{1}{12}$ \\
+%     $1$ & $\frac{3}{4}$ & $\frac{1}{4}$ \\
+%     \hline
+%                 & $\frac{3}{4}$ & $\frac{1}{4}$
+%   \end{tabular}
+% \end{center}
+% Such that:
+% \begin{align*}
+%   y_{n+1} = y_n + \frac{h}{4}\left(k_{n1} + 3\cdot k_{n2} \right)\\
+%   k_{n1}=f(t_n + \frac{\Delta t}{3}, y_n + \frac{5}{12}\cdot k_{n1} -\frac{1}{12}\cdot k_{n2})\\
+%   k_{n2}=f(t_n + \frac{2\cdot\Delta t}{3}, y_n + \frac{3}{4}\cdot k_{n1} -\frac{1}{4}\cdot k_{n2})
+% \end{align*}
+% With this known, employ the calculated forms for the $p-q$ equations.
+% \begin{align*}
+%   y_{k}&\equiv\bm{x}_k\\ 
+%   t_k&\equiv s_k \\
+%   f(t_j, y_j)&\equiv\dot{\bm{x}}_j=\begin{bmatrix} 0 & c(s_j) \\ \frac{-c_{nn}|_{s=s_j}}{c^2(s_j)} & 0\end{bmatrix}\begin{bmatrix} q_j \\ p_j\end{bmatrix}\\
+%   \implies k_{n1} &= \dot{\bm{x}}_{j + \frac{1}{3}} = \left(\begin{bmatrix} 0 & c(s_{j + \frac{1}{3}}) \\ \frac{-c_{nn(j+\frac{1}{3})}}{c^2(s_{j+\frac{1}{3}})} & 0\end{bmatrix} + \frac{5}{12} k_{n1} - \frac{1}{12}k_{n2}\right)\begin{bmatrix} q_{j+\frac{1}{3}} \\ p_{j\frac{1}{3}} \end{bmatrix}\\ 
+% \end{align*}
 \section{General Functions}
 \subsection{Sound Speed Profile Representation}
 The sound speed profile is treated as range invariant in the current \texttt{gUAcS} package. The profile is expressed as the knots, coefficients and degree of a B-spline within the configuration files for the program. This requires the B-spline to be evaluated at each depth point for the program. To do so De Boor's Algorithm is implemented where; $\{c_{i}\}$ is the set of spline coefficients, $\{t_{i}\}$ is the set of spline knots and $p$ is the order of the spline. The algorithm is shown below in Algorithm \ref{alg:deboor}.
 \begin{algorithm}[H]
-  \caption{De Boor's Algorithm}
   \label{alg:deboor}
+  \caption{De Boor's Algorithm}
   \begin{algorithmic}
     \Initialise{$x$}
     \State $k\gets i$ for which $i$ satisfies $t_{i} > x$ and $t_{i-1} \leq x$

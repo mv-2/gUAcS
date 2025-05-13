@@ -8,7 +8,7 @@ from guacs import (
     Body,
     # HalfSpace,
     Ssp,
-    Ray,
+    # Ray,
     PyBeam,
 )
 import numpy as np
@@ -64,22 +64,27 @@ def plot_environment(cfg_file: Config) -> list:
 
 
 def plot_pq(beam: PyBeam):
-    fig, ax = plt.subplots(1, 2)
-    ax[0].plot(beam.p_re, beam.p_im)
-    ax[0].scatter(beam.p_re[0], beam.p_im[0])
-    ax[0].set_title("$p$")
-    ax[0].set_xlabel("Real")
-    ax[0].set_ylabel("Imaginary")
-    ax[0].set_ylim([-1, 1])
-    ax[0].set_xlim([-1, 1])
+    fig, ax = plt.subplots(2, 2)
+    iters = list(range(len(beam.p_re)))
+    ax[0, 0].plot(iters, beam.p_re)
+    ax[0, 0].set_ylabel("Re($p$)")
+    ax[0, 0].set_xlabel("Iterations")
+    ax[0, 0].set_ylim([-1, 1e5])
 
-    ax[1].plot(beam.q_re, beam.q_im)
-    ax[1].scatter(beam.q_re[0], beam.q_im[0])
-    ax[0].set_title("$q$")
-    ax[1].set_xlabel("Real")
-    ax[1].set_ylabel("Imaginary")
-    ax[1].set_ylim([-1e-3, 1e-3])
-    ax[1].set_xlim([-1e-3, 1e-3])
+    ax[1, 0].plot(iters, beam.p_im)
+    ax[1, 0].set_ylabel("Im($p$)")
+    ax[1, 0].set_xlabel("Iterations")
+    ax[1, 0].set_ylim([-1, 1e5])
+
+    ax[0, 1].plot(iters, beam.q_re)
+    ax[0, 1].set_ylabel("Re($q$)")
+    ax[0, 1].set_xlabel("Iterations")
+    ax[0, 1].set_ylim([-1, 1e5])
+
+    ax[1, 1].plot(iters, beam.q_im)
+    ax[1, 1].set_ylabel("Im($q$)")
+    ax[1, 1].set_xlabel("Iterations")
+    ax[1, 1].set_ylim([-1, 1e5])
 
     plt.show()
 
@@ -183,10 +188,11 @@ if __name__ == "__main__":
 
     prog_config = ProgConfig(
         max_it=int(1e5),
-        depth_step=1.0,
+        depth_step=0.1,
         max_range=2e5,
         min_range=-10.0,
         output_path="output_data",
+        pq_solver="Radau3IA",
     )
 
     config = Config(prog_config=prog_config, env_config=env_config, sources=sources)
@@ -195,5 +201,5 @@ if __name__ == "__main__":
     rays = [bm.central_ray for bm in beams]
     rays = fix_rays(rays)
     plot_rays(config, rays)
-    plot_pq(beams[99])
+    plot_pq(beams[0])
     # animate_propagation(config, rays, 10)
