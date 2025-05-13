@@ -18,6 +18,7 @@ fn python_rays(config: Config) -> PyResult<Vec<Ray>> {
 
 #[pyfunction]
 #[pyo3(name = "trace_beams")]
+#[allow(clippy::redundant_closure)]
 fn python_beams(config: Config) -> PyResult<Vec<PyBeam>> {
     // silly wrapper for python stuff
     Ok(trace_beams(config)

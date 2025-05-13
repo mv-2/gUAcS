@@ -173,6 +173,7 @@ impl Beam {
 
     /// Update p-q ODE values
     // TODO: Handle errors in a sane way here at some point  Ok(())
+    #[allow(clippy::too_many_arguments)]
     fn update_pq(
         &mut self,
         c_i: &f64,
