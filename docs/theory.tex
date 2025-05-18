@@ -174,11 +174,13 @@ Reflection angle off an object can be simply calculated by noting that the angle
 \begin{align*}
   \int_{z_i}^{z_{i+1}}ds &= \int_{z_i}^{z_{i+1}}\frac{dz}{\sqrt{1-\xi^2\cdot c^2(z)}} \\
   &= \int_{z_i}^{z_{i+1}}\frac{dz}{\sqrt{1-\xi^2\cdot (c_i + g_i\cdot(z - z_i))^2}} \\  
-  &= \left[ \frac{1}{2\cdot g_i \cdot \xi}\ln{\left(\left| \frac{\xi(g_i(z-z_i)+c_i)+1}{\xi(g_i(z-z_i) + c_i)-1}\right|\right)} \right]_{z_i}^{z_{i+1}} \\
-  &= \frac{1}{2\cdot g_i\cdot\xi}\left[ \ln{\left(\left| \frac{\xi(g_i(z_{i+1}-z_i)+c_i)+1}{\xi(g_i(z_{i+1}-z_i) + c_i)-1}\right|\right)} - \ln{\left(\left| \frac{\xi\cdot c_i+1}{\xi \cdot c_i-1}\right|\right)}\right]\\
-  &= \frac{1}{2\cdot g_i\cdot\xi}\ln{\left(\left| \frac{(\xi(g_i(z_{i+1}-z_i)+c_i)+1)(\xi\cdot c_i -1)}{(\xi(g_i(z_{i+1}-z_i) + c_i)-1)(\xi\cdot c_i +1)}\right|\right)}\\
-  &= \frac{1}{2\cdot g_i\cdot\xi}\ln{\left(\left| \frac{(\xi\cdot c_{i+1}+1)(\xi\cdot c_i -1)}{(\xi\cdot c_{i+1}-1)(\xi\cdot c_i +1)}\right|\right)}\textcolor{gray}{,\;\;g_{i}\cdot\Delta z=c_{i+_1}-c_i}
+  &= \frac{1}{\xi\cdot g_i}\int_{u_i}^{u_{i+1}}\frac{du}{\sqrt{1-u^2}},\;\;\textcolor{gray}{u=\xi^2\cdot(c_i + g_i\cdot(z - z_i))^2,\;\;du=\xi\cdot g_i} \\  
+  &=\left[\frac{\arcsin{(u)}}{\xi\cdot g_i}\right]_{u_i}^{u_{i+1}}
 \end{align*}
+\begin{equation}
+  \label{eq:arc_step}
+  \Delta s_i = \frac{\arcsin{(\xi^2\cdot c_{i+1}^2)} - \arcsin{(\xi^2\cdot c_{i}^2)}}{\xi\cdot g_i}
+\end{equation}
 \subsection{Derivation of $c_{nn}$}
 \begin{align*}
   c_{nn} &= \frac{\partial^2 c}{\partial n^2}\\
@@ -341,35 +343,73 @@ Now calculate $k_{n2}$.
          &= \begin{bmatrix} -\frac{5\cdot c_{nn, j+\frac{2}{3}}}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}} & \frac{c^2_{j+\frac{2}{3}}}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}}  \\ -\frac{c_{nn, j+\frac{2}{3}}}{25\cdot c_{j+\frac{2}{3}}\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}^2} & -\frac{5\cdot c_{nn, j+\frac{2}{3}}}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}} \end{bmatrix}\begin{bmatrix} \frac{12}{\Delta s} \cdot q_j + 3\cdot k_{n1}^{(1)} \\ \frac{12}{\Delta s} \cdot p_j + 3\cdot k_{n1}^{(2)} \end{bmatrix}\\
   \therefore k_{n2} &= \begin{bmatrix} -\frac{5\cdot c_{nn, j+\frac{2}{3}}\cdot\left(\frac{12}{\Delta s} \cdot q_j + 3\cdot k_{n1}^{(1)} \right)}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}} + \frac{c^2_{j+\frac{2}{3}}\cdot\left(\frac{12}{\Delta s} \cdot p_j + 3\cdot k_{n1}^{(2)}  \right)}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}}  \\ -\frac{c_{nn, j+\frac{2}{3}}\cdot\left(\frac{12}{\Delta s} \cdot q_j + 3\cdot k_{n1}^{(1)} \right)}{25\cdot c_{j+\frac{2}{3}}\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}^2} - \frac{5\cdot c_{nn, j+\frac{2}{3}}\cdot \left(\frac{12}{\Delta s}p_j + 3\cdot k_{n1}^{(2)}  \right)}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}} \end{bmatrix}
 \end{align*}
-% \subsubsection{3rd Order Radau IIA}
-% In order to numerically solve these equations, an implicit solver is required. In order to derive this implicit solution, the equations must be converted to matrix form.
-% \begin{align*}
-%   \textrm{let}\;\;\bm{x}=\begin{bmatrix}q \\ s \end{bmatrix}\\
-%   \therefore \dot{\bm{x}}=\begin{bmatrix} \frac{dq}{ds} \\ \frac{dp}{ds}\end{bmatrix}\\
-%   \dot{\bm{x}} = \begin{bmatrix} 0 & c(s) \\ \frac{-c_{nn}}{c^2(s)} & 0\end{bmatrix}\bm{x}
-% \end{align*}
-% For a good implicit method, the 3rd order Radau IIA method is selected. This method is defined by the Butcher Tableu:
-% \begin{center}
-%   \begin{tabular}{c|c c}
-%     $\frac{1}{3}$ & $\frac{5}{12}$ & $-\frac{1}{12}$ \\
-%     $1$ & $\frac{3}{4}$ & $\frac{1}{4}$ \\
-%     \hline
-%                 & $\frac{3}{4}$ & $\frac{1}{4}$
-%   \end{tabular}
-% \end{center}
-% Such that:
-% \begin{align*}
-%   y_{n+1} = y_n + \frac{h}{4}\left(k_{n1} + 3\cdot k_{n2} \right)\\
-%   k_{n1}=f(t_n + \frac{\Delta t}{3}, y_n + \frac{5}{12}\cdot k_{n1} -\frac{1}{12}\cdot k_{n2})\\
-%   k_{n2}=f(t_n + \frac{2\cdot\Delta t}{3}, y_n + \frac{3}{4}\cdot k_{n1} -\frac{1}{4}\cdot k_{n2})
-% \end{align*}
-% With this known, employ the calculated forms for the $p-q$ equations.
-% \begin{align*}
-%   y_{k}&\equiv\bm{x}_k\\ 
-%   t_k&\equiv s_k \\
-%   f(t_j, y_j)&\equiv\dot{\bm{x}}_j=\begin{bmatrix} 0 & c(s_j) \\ \frac{-c_{nn}|_{s=s_j}}{c^2(s_j)} & 0\end{bmatrix}\begin{bmatrix} q_j \\ p_j\end{bmatrix}\\
-%   \implies k_{n1} &= \dot{\bm{x}}_{j + \frac{1}{3}} = \left(\begin{bmatrix} 0 & c(s_{j + \frac{1}{3}}) \\ \frac{-c_{nn(j+\frac{1}{3})}}{c^2(s_{j+\frac{1}{3}})} & 0\end{bmatrix} + \frac{5}{12} k_{n1} - \frac{1}{12}k_{n2}\right)\begin{bmatrix} q_{j+\frac{1}{3}} \\ p_{j\frac{1}{3}} \end{bmatrix}\\ 
-% \end{align*}
+\subsubsection{3rd Order Radau  IIA}
+\begin{center}
+  \begin{tabular}{c|c c}
+    $\frac{1}{3}$ & $\frac{5}{12}$ & $-\frac{1}{12}$ \\
+    $1$ & $\frac{3}{4}$ & $\frac{1}{4}$ \\
+    \hline
+                & $\frac{3}{4}$ & $\frac{1}{4}$
+  \end{tabular}
+\end{center}
+Apply the Butcher Tableu to the $p-q$ equations.
+\begin{align*}
+  \bm{x}_{j+1} &= \bm{x}_j + \frac{\Delta s}{4}\left(3\cdot\bm{k}_{n1} + \bm{k}_{n2} \right)\\
+  \bm{k}_{n1} &= A_{j+\frac{1}{3}}\left(\bm{x}_{j} +\frac{\Delta s}{12} \left( 5\cdot\bm{k}_{n1} - \bm{k}_{n2}\right)\right)\\
+  \bm{k}_{n2} &= A_{j+1}\left(\bm{x}_{j} +\frac{\Delta s}{4} \left( 3\cdot\bm{k}_{n1} + \bm{k}_{n2}\right)\right)\\
+  \\
+  \bm{k}_{n1} &= A_{j+\frac{1}{3}}\left(\bm{x}_{j} +\frac{\Delta s}{12} \left( 5\cdot\bm{k}_{n1} - \bm{k}_{n2}\right)\right)\\
+  A_{j+\frac{1}{3}}^{-1}\bm{k}_{n1} &= \bm{x}_{j} + \frac{\Delta s}{12} \left( 5\cdot\bm{k}_{n1} - \bm{k}_{n2}\right)\\
+  \bm{k}_{n2} &= \frac{12}{\Delta s}\left(\bm{x}_j + \left( \frac{5\cdot\Delta s}{12}\mathbb{I} - A_{j+\frac{1}{3}}^{-1}\right)\bm{k}_{n1}\right)\\
+\end{align*}
+\begin{equation}
+  \label{eq:Radau3IIAkn2side1}
+  \therefore \bm{k}_{n2} = \frac{12}{\Delta s}\left(\bm{x}_j + B_{j+\frac{1}{3}}\bm{k}_{n1}\right)\\
+\end{equation}
+\begin{align*}
+  \bm{k}_{n2} &= A_{j+1}\left(\bm{x}_{j} +\frac{\Delta s}{4} \left( 3\cdot\bm{k}_{n1} + \bm{k}_{n2}\right)\right)\\
+  A_{j+1}^{-1}\bm{k}_{n2} &= \bm{x}_j + \frac{\Delta s}{4}\left(3\cdot\bm{k}_{n1} - \bm{k}_{n2}\right)\\
+  \left(A_{j+1}^{-1} + \frac{\Delta s}{4}\mathbb{I}\right)\bm{k}_{n2} &= \bm{x}_j + \frac{3\cdot\Delta s}{4}\bm{k}_{n1}\\
+  \implies C_{j+1}\bm{k}_{n2} &= \bm{x}_j + \frac{3\cdot \Delta s}{4}\bm{k}_{n1}\\
+\end{align*}
+\begin{equation}
+  \label{eq:Radau3IIAkn2side2}
+  \therefore \bm{k}_{n2} = C_{j+1}^{-1}\left(\bm{x}_j +\frac{3\cdot \Delta s}{4}\bm{k}_{n1}\right)
+\end{equation}
+Equate the right hand sides of Equations \ref{eq:Radau3IIAkn2side1} and \ref{eq:Radau3IIAkn2side2}.
+\begin{align*}
+   C_{j+1}^{-1}\left(\bm{x}_j +\frac{3\cdot \Delta s}{4}\bm{k}_{n1}\right) &= \frac{12}{\Delta s}\left(\bm{x}_j + B_{j+\frac{1}{3}}\bm{k}_{n1}\right)\\
+   \bm{x}_j - \frac{12}{\Delta s}C_{j+1}\bm{x}_j &= \left(C_{j+1}B_{j+\frac{1}{3}} - \frac{3\cdot\Delta s}{4}\mathbb{I}\right)\bm{k}_{n1}\\
+   \implies \bm{x}_j - \frac{12}{\Delta s}C_{j+1}\bm{x}_j &= D_j\bm{k}_{n1}\\
+   \implies \bm{k}_{n1} & = D_j^{-1}\left(\bm{x}_j - \frac{12}{\Delta s}C_{j+1}\bm{x}_j\right) \\
+ \end{align*}
+\begin{equation}
+  \label{eq:Radau3IIAkn1Solved}
+   \therefore \bm{k}_{n1} = D_j^{-1}\left(\mathbb{I} - \frac{12}{\Delta s}C_{j+1}\right)\bm{x}_j \\
+\end{equation}
+Use Equation \ref{eq:Radau3IIAkn1Solved} and \ref{eq:Radau3IIAkn2side2} to calculate $k_{n2}$.
+\begin{align*}
+  \bm{k}_{n2} &= C_{j+1}^{-1}\left(\bm{x}_j +\frac{3\cdot \Delta s}{4}D_j^{-1}\left(\mathbb{I} - \frac{12}{\Delta s}C_{j+1}\right)\bm{x}_j\right)\\
+  &= C_{j+1}^{-1}\left(\mathbb{I} +\frac{3\cdot \Delta s}{4}D_j^{-1}\left(\mathbb{I} - \frac{12}{\Delta s}C_{j+1}\right)\right)\bm{x}_j\\
+  \therefore \bm{k}_{n2} &= \left(C_{j+1}^{-1} +\frac{3\cdot \Delta s}{4}C_{j+1}^{-1}D_j^{-1} - 9\cdot D_{j}^{-1}\right)\bm{x}_j\\
+\end{align*}
+For comparison use Equation \ref{eq:Radau3IIAkn1Solved} and \ref{eq:Radau3IIAkn2side1} to calculate $k_{n2}$.
+\begin{align*}
+  \bm{k}_{n2} &= \frac{12}{\Delta s}\left(\bm{x}_j + B_{j+\frac{1}{3}}D_{j}^{-1}\left(\mathbb{I} - \frac{12}{\Delta s}C_{j+1} \right)\bm{x}_j\right)\\
+              &= \frac{12}{\Delta s}\left(\mathbb{I} + B_{j+\frac{1}{3}}D_{j}^{-1} - \frac{12}{\Delta s}B_{j+\frac{1}{3}}D_{j}^{-1}C_{j+1} \right)\bm{x}_j\\
+\end{align*}
+With equations for $\bm{k}_{n1}$ and $\bm{k}_{n2}$ derived, derive the specifics required for computation.
+\begin{align*}
+  A_j &= \begin{bmatrix} 0 & c_j \\ -\frac{c_{nn, j}}{c_j^2} & 0 \end{bmatrix}  \\
+  A_j^{-1} &= \begin{bmatrix} 0 & -\frac{c_j^2}{c_{nn, j}} \\ \frac{1}{c_j} & 0 \end{bmatrix}  \\
+  B_j &= \frac{5\cdot\Delta s}{12}\mathbb{I} - A_{j}^{-1}\\
+  \therefore B_{j}&= \begin{bmatrix} \frac{5\cdot \Delta s}{12} & \frac{c_j^2}{c_{nn, j}} \\ -\frac{1}{c_j} & \frac{5\cdot\Delta s}{12} \end{bmatrix}\\
+  C_j &= A_{j}^{-1} + \frac{\Delta s}{4}\mathbb{I}\\
+  \therefore C_j &= \begin{bmatrix} \frac{\Delta s}{4} & -\frac{c_j^2}{c_{nn, j}} \\ \frac{1}{c_j} & \frac{\Delta s}{4} \end{bmatrix}\\
+  C_j^{-1} &= \frac{1}{\frac{\Delta s^2}{16} + \frac{c_j}{c_{nn, j}}}\begin{bmatrix} \frac{\Delta s}{4} & \frac{c_j^2}{c_{nn, j}} \\ -\frac{1}{c_j} & \frac{\Delta s}{4} \end{bmatrix} \\
+  C_j^{-1} &= \frac{16\cdot c_{nn, j}}{c_{nn, j}\cdot \Delta s^2 + 16\cdot c_j}\begin{bmatrix} \frac{\Delta s}{4} & \frac{c_j^2}{c_{nn, j}} \\ -\frac{1}{c_j} & \frac{\Delta s}{4} \end{bmatrix} \\
+\end{align*}
+
 \section{General Functions}
 \subsection{Sound Speed Profile Representation}
 The sound speed profile is treated as range invariant in the current \texttt{gUAcS} package. The profile is expressed as the knots, coefficients and degree of a B-spline within the configuration files for the program. This requires the B-spline to be evaluated at each depth point for the program. To do so De Boor's Algorithm is implemented where; $\{c_{i}\}$ is the set of spline coefficients, $\{t_{i}\}$ is the set of spline knots and $p$ is the order of the spline. The algorithm is shown below in Algorithm \ref{alg:deboor}.

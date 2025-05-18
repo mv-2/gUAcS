@@ -184,6 +184,10 @@ impl Beam {
         depth_step: &f64,
         method: &SolverMethod,
     ) {
+        //TODO: Not a real bug but might be best to make an anonymous closure for the pq update
+        //similar to the window closure used in faster_fourier_transform (This comment refers to
+        //other code I wrote in a private repo so it will not make sense to anyone other than
+        //myself)
         match method {
             SolverMethod::RungeKutta4 => {
                 self.update_pq_rk4(c_i, c_i1, c_im1, c_i2, g_i, depth_step);
@@ -209,13 +213,7 @@ impl Beam {
     ) {
         let c_i1_2: f64 = (c_i1 + c_i) / 2.0;
         // Calculate arc length in last depth step
-        let arc_step: f64 = ((self.central_ray.ray_param * c_i1 + 1.0)
-            * (self.central_ray.ray_param * c_i - 1.0)
-            / ((self.central_ray.ray_param * c_i1 - 1.0)
-                * (self.central_ray.ray_param * c_i + 1.0)))
-            .abs()
-            .ln()
-            / (2.0 * g_i * self.central_ray.ray_param);
+        let arc_step: f64 = calculate_arc_step(&self.central_ray.ray_param, c_i1, c_i, g_i);
         // RK4 Method for now
         //calculate 2nd derivate of SSP wrt normal for steps j, j+1/2 and j+1
         let c_nn_j: f64 =
@@ -258,13 +256,7 @@ impl Beam {
         g_i: &f64,
         depth_step: &f64,
     ) {
-        let arc_step: f64 = ((self.central_ray.ray_param * c_i1 + 1.0)
-            * (self.central_ray.ray_param * c_i - 1.0)
-            / ((self.central_ray.ray_param * c_i1 - 1.0)
-                * (self.central_ray.ray_param * c_i + 1.0)))
-            .abs()
-            .ln()
-            / (2.0 * g_i * self.central_ray.ray_param);
+        let arc_step: f64 = calculate_arc_step(&self.central_ray.ray_param, c_i1, c_i, g_i);
         let c_i2_3 = (c_i1 + c_i1 + c_i) / 3.0;
         let c_nn_i: f64 =
             -self.central_ray.ray_param * c_i * (c_i1 - 2.0 * c_i + c_im1) / depth_step.powi(2);
@@ -311,13 +303,7 @@ impl Beam {
         g_i: &f64,
         depth_step: &f64,
     ) {
-        let arc_step: f64 = ((self.central_ray.ray_param * c_i1 + 1.0)
-            * (self.central_ray.ray_param * c_i - 1.0)
-            / ((self.central_ray.ray_param * c_i1 - 1.0)
-                * (self.central_ray.ray_param * c_i + 1.0)))
-            .abs()
-            .ln()
-            / (2.0 * g_i * self.central_ray.ray_param);
+        let arc_step: f64 = calculate_arc_step(&self.central_ray.ray_param, c_i1, c_i, g_i);
         let c_nn_i1: f64 =
             -self.central_ray.ray_param * c_i1 * (c_i2 - 2.0 * c_i1 + c_i) / depth_step.powi(2);
         let coeff: f64 = c_i1 / (1.0 - arc_step.powi(2) * c_nn_i1);
@@ -336,6 +322,11 @@ impl Beam {
         self.q_vals.truncate(self.central_ray.ray_iter + 1);
         self.p_vals.truncate(self.central_ray.ray_iter + 1);
     }
+}
+
+/// Calculates arc step funnily enough
+fn calculate_arc_step(ray_param: &f64, c_i1: &f64, c_i: &f64, g_i: &f64) -> f64 {
+    ((ray_param * c_i1).powi(2).asin() - (ray_param * c_i).powi(2).asin()) / (ray_param * g_i)
 }
 
 /// Driving beam tracing function

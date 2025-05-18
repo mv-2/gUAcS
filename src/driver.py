@@ -188,7 +188,7 @@ if __name__ == "__main__":
 
     prog_config = ProgConfig(
         max_it=int(1e5),
-        depth_step=0.1,
+        depth_step=1.0,
         max_range=2e5,
         min_range=-10.0,
         output_path="output_data",
@@ -201,5 +201,5 @@ if __name__ == "__main__":
     rays = [bm.central_ray for bm in beams]
     rays = fix_rays(rays)
     plot_rays(config, rays)
-    plot_pq(beams[0])
+    plot_pq(beams[90])
     # animate_propagation(config, rays, 10)
