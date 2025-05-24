@@ -408,6 +408,9 @@ With equations for $\bm{k}_{n1}$ and $\bm{k}_{n2}$ derived, derive the specifics
   \therefore C_j &= \begin{bmatrix} \frac{\Delta s}{4} & -\frac{c_j^2}{c_{nn, j}} \\ \frac{1}{c_j} & \frac{\Delta s}{4} \end{bmatrix}\\
   C_j^{-1} &= \frac{1}{\frac{\Delta s^2}{16} + \frac{c_j}{c_{nn, j}}}\begin{bmatrix} \frac{\Delta s}{4} & \frac{c_j^2}{c_{nn, j}} \\ -\frac{1}{c_j} & \frac{\Delta s}{4} \end{bmatrix} \\
   C_j^{-1} &= \frac{16\cdot c_{nn, j}}{c_{nn, j}\cdot \Delta s^2 + 16\cdot c_j}\begin{bmatrix} \frac{\Delta s}{4} & \frac{c_j^2}{c_{nn, j}} \\ -\frac{1}{c_j} & \frac{\Delta s}{4} \end{bmatrix} \\
+  D_j &= C_{j+1}B_{j+\frac{1}{3}} - \frac{3\cdot\Delta s}{4}\mathbb{I}\\
+      &= \begin{bmatrix} \frac{\Delta s}{4} & -\frac{c_{j+1}^2}{c_{nn, j+1}} \\ \frac{1}{c_{j+1}} & \frac{\Delta s}{4} \end{bmatrix}\begin{bmatrix} \frac{5\cdot \Delta s}{12} & \frac{c_{j+\frac{1}{3}}^2}{c_{nn, j+\frac{1}{3}}} \\ -\frac{1}{c_{j+\frac{1}{3}}} & \frac{5\cdot\Delta s}{12} \end{bmatrix} - \begin{bmatrix} \frac{3\cdot\Delta s}{4} & 0 \\ 0 & \frac{3\cdot\Delta s}{4} \end{bmatrix}\\
+      &= \begin{bmatrix} \frac{5\cdot\Delta s^2}{48^2} + \frac{c_{j+1}^2}{c_{nn, j}\cdot c_{j+\frac{1}{3}}} - \frac{3\cdot\Delta s}{4} & \frac{\Delta s\cdot c^2_{j+\frac{1}{3}}}{4\cdot c_{nn, j+\frac{1}{3}}} - \frac{5\cdot\Delta s\cdot c^2_{j+1}}{c_{nn, j+1}} \\ \frac{5\cdot\Delta s}{12\cdot c_{j+1}} - \frac{\Delta s}{4\cdot c_{j+\frac{1}{3}}} & \frac{c^2_{j+\frac{1}{3}}}{c_{j+1}\cdot c_{nn, j+\frac{1}{3}}} + \frac{5\cdot\Delta s^2}{48} - \frac{3\cdot\Delta s}{4} \end{bmatrix}\\
 \end{align*}
 
 \section{General Functions}
