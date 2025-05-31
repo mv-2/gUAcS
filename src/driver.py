@@ -188,7 +188,7 @@ if __name__ == "__main__":
 
     prog_config = ProgConfig(
         max_it=int(1e5),
-        depth_step=0.1,
+        depth_step=10.0,
         max_range=2e5,
         min_range=-10.0,
         output_path="output_data",

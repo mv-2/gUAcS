@@ -9,7 +9,7 @@ use std::error::Error;
 use std::ops::RangeInclusive;
 use uuid::Uuid;
 
-// NUCLEAR OPTION FOR REFLECTION CALCULATION
+//TODO: NUCLEAR OPTION FOR REFLECTION CALCULATION
 pub const REFLECT_OFFSET: f64 = 0.1;
 
 /// Stores data on body geometry
@@ -109,6 +109,7 @@ pub struct Ssp {
     pub ssp_degree: usize,
 }
 
+/// Stores result of [`check_finite_intersection()`]
 struct IntersectLoc {
     range: f64,
     depth: f64,
@@ -116,6 +117,7 @@ struct IntersectLoc {
     edge_id: usize,
 }
 
+/// Stores result of reflection calculation in [`calculate_reflection()`]
 pub struct ReflectResult {
     pub range: f64,
     pub depth: f64,
