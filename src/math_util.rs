@@ -21,9 +21,35 @@ pub fn deboor_alg(x: f64, knots: &[f64], coeffs: &[f64], order: usize) -> f64 {
     d_coeff[order]
 }
 
-/// RK4 step for variable step size
-pub fn rk4_var_step_2d() -> [f64; 2] {
-    todo!();
+/// 2x2 matrix struct to simplify beam tracing formulae
+pub struct Mat2<T> {
+    pub a: T,
+    pub b: T,
+    pub c: T,
+    pub d: T,
+}
+
+impl Mat2<f64> {
+    /// returns inverted [`Mat2`] struct
+    pub fn inv(&self) -> Mat2<f64> {
+        let det = (self.a * self.d - self.c * self.b).powi(-1);
+        Mat2 {
+            a: self.d / det,
+            b: -self.b / det,
+            c: -self.c / det,
+            d: self.a / det,
+        }
+    }
+
+    /// Matrix multiplication between self and second [`Mat2`]
+    pub fn mul22(&self, mulmat: &Mat2<f64>) -> Mat2<f64> {
+        Mat2 {
+            a: self.a * mulmat.a + self.b * mulmat.c,
+            b: self.a * mulmat.b + self.b * mulmat.d,
+            c: self.c * mulmat.a + self.d * mulmat.c,
+            d: self.c * mulmat.b + self.d * mulmat.d,
+        }
+    }
 }
 
 #[cfg(test)]

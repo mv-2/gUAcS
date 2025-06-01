@@ -192,7 +192,7 @@ if __name__ == "__main__":
         max_range=2e5,
         min_range=-10.0,
         output_path="output_data",
-        pq_solver="Radau3IA",
+        pq_solver="Radau3IIA",
     )
 
     config = Config(prog_config=prog_config, env_config=env_config, sources=sources)

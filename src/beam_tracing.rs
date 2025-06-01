@@ -1,4 +1,5 @@
 use crate::interface::{Config, EnvConfig, ProgConfig};
+use crate::math_util::Mat2;
 use crate::path_tracing::{DirChange, Ray, RayInit, Ssp};
 use num::complex::Complex64;
 use pyo3::prelude::*;
@@ -51,6 +52,7 @@ enum SolverMethod {
     RungeKutta4,
     Radau3IA,
     BackEuler,
+    Radau3IIA,
 }
 impl SolverMethod {
     pub fn from_string(str: &str) -> SolverMethod {
@@ -58,6 +60,7 @@ impl SolverMethod {
             "BackwardEuler" => SolverMethod::BackEuler,
             "RungeKutta4" => SolverMethod::RungeKutta4,
             "Radau3IA" => SolverMethod::Radau3IA,
+            "Radau3IIA" => SolverMethod::Radau3IIA,
             _ => panic!("Buffoon"),
         }
     }
@@ -194,6 +197,9 @@ impl Beam {
             SolverMethod::BackEuler => {
                 self.update_pq_back_euler(c_i, c_i1, c_i2, g_i, depth_step);
             }
+            SolverMethod::Radau3IIA => {
+                self.update_pq_radau3_iia(c_i, c_i1, c_im1, c_i2, g_i, depth_step);
+            }
         }
     }
 
@@ -248,6 +254,46 @@ impl Beam {
             + arc_step * (k_n1[1] + 2.0 * (k_n2[1] + k_n3[1]) + k_n4[1]) / 6.0;
     }
 
+    fn update_pq_radau3_iia(
+        &mut self,
+        c_i: &f64,
+        c_i1: &f64,
+        c_im1: &f64,
+        c_i2: &f64,
+        g_i: &f64,
+        depth_step: &f64,
+    ) {
+        let arc_step: f64 = ((self.central_ray.ray_param * c_i1 + 1.0)
+            * (self.central_ray.ray_param * c_i - 1.0)
+            / ((self.central_ray.ray_param * c_i1 - 1.0)
+                * (self.central_ray.ray_param * c_i + 1.0)))
+            .abs()
+            .ln()
+            / (2.0 * g_i * self.central_ray.ray_param);
+        let c_i1_3 = (c_i1 + c_i + c_i) / 3.0;
+        let c_nn_i: f64 =
+            -self.central_ray.ray_param * c_i * (c_i1 - 2.0 * c_i + c_im1) / depth_step.powi(2);
+        let c_nn_i1: f64 =
+            -self.central_ray.ray_param * c_i1 * (c_i2 - 2.0 * c_i1 + c_i) / depth_step.powi(2);
+        let c_nn_i1_3: f64 = (c_nn_i + c_nn_i + c_nn_i1) / 3.0;
+        let matrix_bj: Mat2<f64> = Mat2 {
+            a: 1.0 - arc_step.powi(2) * c_nn_i1 * c_i1_3 / (6.0 * c_i1.powi(2)),
+            b: arc_step * (5.0 * c_i1_3 + 3.0 * c_i1) / 12.0,
+            c: -arc_step * (5.0 * c_nn_i1_3 / c_i1_3.powi(2) + 3.0 * c_nn_i1 / c_i1.powi(2)) / 12.0,
+            d: 1.0 - arc_step.powi(2) * c_i1 * c_nn_i1_3 / (6.0 * c_i1_3.powi(2)),
+        };
+        let matrix_bj_inv: Mat2<f64> = matrix_bj.inv();
+        let matrix_c: Mat2<f64> = Mat2 {
+            a: 1.0,
+            b: arc_step * c_i1_3 / 3.0,
+            c: -arc_step * c_nn_i1_3 / (3.0 * c_nn_i1_3.powi(2)),
+            d: 1.0,
+        };
+        let matmul: Mat2<f64> = matrix_bj_inv.mul22(&matrix_c);
+        let j: usize = self.central_ray.ray_iter;
+        self.q_vals[j + 1] = matmul.a * self.q_vals[j] + matmul.b * self.p_vals[j];
+        self.p_vals[j + 1] = matmul.c * self.q_vals[j] + matmul.d * self.p_vals[j];
+    }
     /// Radau3IA Solver
     fn update_pq_radau3_ia(
         &mut self,
