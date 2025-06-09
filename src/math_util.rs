@@ -32,7 +32,7 @@ pub struct Mat2<T> {
 impl Mat2<f64> {
     /// returns inverted [`Mat2`] struct
     pub fn inv(&self) -> Mat2<f64> {
-        let det = (self.a * self.d - self.c * self.b).powi(-1);
+        let det = (self.a * self.d - self.b * self.c).powi(-1);
         Mat2 {
             a: self.d / det,
             b: -self.b / det,
@@ -49,6 +49,11 @@ impl Mat2<f64> {
             c: self.c * mulmat.a + self.d * mulmat.c,
             d: self.c * mulmat.b + self.d * mulmat.d,
         }
+    }
+
+    /// displays matrix
+    pub fn disp(&self) {
+        println!("[{:}, {:};\n {:}, {:}]", self.a, self.b, self.c, self.d);
     }
 }
 

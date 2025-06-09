@@ -172,12 +172,12 @@ Reflection angle off an object can be simply calculated by noting that the angle
 \section{Gaussian Beam Tracing}
 \subsection{Arc Step Integration Derivation}
 \begin{align*}
-	\int_{z_i}^{z_{i+1}}ds & = \int_{z_i}^{z_{i+1}}\frac{dz}{\sqrt{1-\xi^2\cdot c^2(z)}}                                                                                                                                                            \\
-	                       & = \int_{z_i}^{z_{i+1}}\frac{dz}{\sqrt{1-\xi^2\cdot (c_i + g_i\cdot(z - z_i))^2}}                                                                                                                                       \\
-	                       & = \left[ \frac{1}{2\cdot g_i \cdot \xi}\ln{\left(\left| \frac{\xi(g_i(z-z_i)+c_i)+1}{\xi(g_i(z-z_i) + c_i)-1}\right|\right)} \right]_{z_i}^{z_{i+1}}                                                                   \\
-	                       & = \frac{1}{2\cdot g_i\cdot\xi}\left[ \ln{\left(\left| \frac{\xi(g_i(z_{i+1}-z_i)+c_i)+1}{\xi(g_i(z_{i+1}-z_i) + c_i)-1}\right|\right)} - \ln{\left(\left| \frac{\xi\cdot c_i+1}{\xi \cdot c_i-1}\right|\right)}\right] \\
-	                       & = \frac{1}{2\cdot g_i\cdot\xi}\ln{\left(\left| \frac{(\xi(g_i(z_{i+1}-z_i)+c_i)+1)(\xi\cdot c_i -1)}{(\xi(g_i(z_{i+1}-z_i) + c_i)-1)(\xi\cdot c_i +1)}\right|\right)}                                                  \\
-	                       & = \frac{1}{2\cdot g_i\cdot\xi}\ln{\left(\left| \frac{(\xi\cdot c_{i+1}+1)(\xi\cdot c_i -1)}{(\xi\cdot c_{i+1}-1)(\xi\cdot c_i +1)}\right|\right)}\textcolor{gray}{,\;\;g_{i}\cdot\Delta z=c_{i+_1}-c_i}
+	\int_{z_i}^{z_{i+1}}ds & = \int_{z_i}^{z_{i+1}}\frac{dz}{\sqrt{1-\xi^2\cdot c^2(z)}}                                                       \\
+	                       & = \int_{z_i}^{z_{i+1}}\frac{dz}{\sqrt{1-\xi^2\cdot (c_i + g_i\cdot(z - z_i))^2}}                                  \\
+	                       & = \frac{1}{g_i\cdot\zeta}\int_{u_i}^{u_{i+1}}\frac{du}{\sqrt{1-u^2}}\textcolor{gray}{\;\;\;u=\xi(c_i+g_i(z-z_i))} \\
+	                       & = \left[\frac{\arcsin{(u)}}{g_i\cdot\xi}\right]_{u_i}^{u_{i+1}}                                                   \\
+	                       & = \left[\frac{\arcsin{(u)}}{g_i\cdot\xi}\right]_{c_i}^{c_{i+1}}                                                   \\
+	\therefore \Delta s    & = \frac{\arcsin{(\xi\cdot c_{i+1})} - \arcsin{(\xi\cdot c_i)}}{g_i\cdot\xi}                                       \\
 \end{align*}
 \subsection{Derivation of $c_{nn}$}
 \begin{align*}

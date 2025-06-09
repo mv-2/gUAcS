@@ -263,13 +263,9 @@ impl Beam {
         g_i: &f64,
         depth_step: &f64,
     ) {
-        let arc_step: f64 = ((self.central_ray.ray_param * c_i1 + 1.0)
-            * (self.central_ray.ray_param * c_i - 1.0)
-            / ((self.central_ray.ray_param * c_i1 - 1.0)
-                * (self.central_ray.ray_param * c_i + 1.0)))
-            .abs()
-            .ln()
-            / (2.0 * g_i * self.central_ray.ray_param);
+        let arc_step: f64 = ((self.central_ray.ray_param * c_i1).asin()
+            - (self.central_ray.ray_param * c_i).asin())
+            / (g_i * self.central_ray.ray_param);
         let c_i1_3 = (c_i1 + c_i + c_i) / 3.0;
         let c_nn_i: f64 =
             -self.central_ray.ray_param * c_i * (c_i1 - 2.0 * c_i + c_im1) / depth_step.powi(2);
@@ -283,6 +279,10 @@ impl Beam {
             d: 1.0 - arc_step.powi(2) * c_i1 * c_nn_i1_3 / (6.0 * c_i1_3.powi(2)),
         };
         let matrix_bj_inv: Mat2<f64> = matrix_bj.inv();
+        println!("---------------------------------------");
+        matrix_bj.disp();
+        matrix_bj_inv.disp();
+        println!("{arc_step}");
         let matrix_c: Mat2<f64> = Mat2 {
             a: 1.0,
             b: arc_step * c_i1_3 / 3.0,
