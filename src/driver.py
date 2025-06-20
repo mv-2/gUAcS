@@ -24,6 +24,10 @@ def munk_profile(depth: float) -> float:
     )
 
 
+def downward_refract(depth: float) -> float:
+    return 1677.3319 / np.sqrt(1 + 2.0 * 1.2276762 * depth / 1677.3319)
+
+
 def fix_rays(raw_rays: list) -> list:
     for i in range(len(raw_rays)):
         raw_rays[i].range_vals = np.array(raw_rays[i].range_vals)
@@ -63,7 +67,7 @@ def plot_environment(cfg_file: Config) -> list:
     return [fig, ax_rays, ax_ssp, ax_g]
 
 
-def plot_pq(beam: PyBeam):
+def plot_pq(beam: PyBeam) -> plt.figure:
     fig, ax = plt.subplots(2, 2)
     iters = list(range(len(beam.p_re)))
     ax[0, 0].plot(iters, beam.p_re)
@@ -86,10 +90,10 @@ def plot_pq(beam: PyBeam):
     ax[1, 1].set_xlabel("Iterations")
     ax[1, 1].set_ylim([-1, 1e5])
 
-    plt.show()
+    return fig
 
 
-def plot_rays(cfg_file: Config, rays: list):
+def plot_rays(cfg_file: Config, rays: list) -> plt.figure():
     fig, ax_rays, ax_ssp, ax_g = plot_environment(cfg_file)
 
     for ray in rays:
@@ -97,7 +101,7 @@ def plot_rays(cfg_file: Config, rays: list):
             np.array(ray.range_vals) / 1000, ray.depth_vals, c="k", linewidth=0.5
         )
 
-    plt.show()
+    return fig
 
 
 def time_interp_rays(rays: list, time_vals: np.array) -> list:
@@ -147,10 +151,10 @@ if __name__ == "__main__":
     ]
 
     bodies = [
-        Body(
-            range_vals=[20000.0, 20100.0, 20100.0, 20000.0, 20000.0],
-            depth_vals=[1400.0, 1400.0, 1310.0, 1310.0, 1400.0],
-        ),
+        # Body(
+        #     range_vals=[20000.0, 20100.0, 20100.0, 20000.0, 20000.0],
+        #     depth_vals=[1400.0, 1400.0, 1310.0, 1310.0, 1400.0],
+        # ),
         Body(
             range_vals=[0.0, 200000.0, 200000.0, 0.0, 0.0],
             depth_vals=[5000.0, 5000.0, 5100.0, 5100.0, 5000.0],
@@ -175,7 +179,7 @@ if __name__ == "__main__":
     max_depth = 5000
     depth_step = 100
     munk_depths = range(-2 * depth_step, max_depth + 3 * depth_step, depth_step)
-    munk_vals = [munk_profile(z) for z in munk_depths]
+    munk_vals = [downward_refract(z) for z in munk_depths]
 
     (ssp_knots, ssp_coefs, ssp_degree) = splrep(munk_depths, munk_vals, k=3)
 
@@ -200,5 +204,6 @@ if __name__ == "__main__":
     beams = trace_beams(config)
     rays = [bm.central_ray for bm in beams]
     rays = fix_rays(rays)
-    plot_rays(config, rays)
-    plot_pq(beams[0])  # animate_propagation(config, rays, 10)
+    ray_fig = plot_rays(config, rays)
+    pq_fig = plot_pq(beams[0])  # animate_propagation(config, rays, 10)
+    plt.show()

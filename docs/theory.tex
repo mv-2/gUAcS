@@ -176,7 +176,7 @@ Reflection angle off an object can be simply calculated by noting that the angle
 	                       & = \int_{z_i}^{z_{i+1}}\frac{dz}{\sqrt{1-\xi^2\cdot (c_i + g_i\cdot(z - z_i))^2}}                                  \\
 	                       & = \frac{1}{g_i\cdot\zeta}\int_{u_i}^{u_{i+1}}\frac{du}{\sqrt{1-u^2}}\textcolor{gray}{\;\;\;u=\xi(c_i+g_i(z-z_i))} \\
 	                       & = \left[\frac{\arcsin{(u)}}{g_i\cdot\xi}\right]_{u_i}^{u_{i+1}}                                                   \\
-	                       & = \left[\frac{\arcsin{(u)}}{g_i\cdot\xi}\right]_{c_i}^{c_{i+1}}                                                   \\
+	                       & = \left[\frac{\arcsin{(u)}}{g_i\cdot\xi}\right]_{\xi\cdot c_i}^{\xi\cdot c_{i+1}}                                 \\
 	\therefore \Delta s    & = \frac{\arcsin{(\xi\cdot c_{i+1})} - \arcsin{(\xi\cdot c_i)}}{g_i\cdot\xi}                                       \\
 \end{align*}
 \subsection{Derivation of $c_{nn}$}
@@ -341,7 +341,7 @@ Now calculate $k_{n2}$.
 	                  & = \begin{bmatrix} -\frac{5\cdot c_{nn, j+\frac{2}{3}}}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}} & \frac{c^2_{j+\frac{2}{3}}}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}}  \\ -\frac{c_{nn, j+\frac{2}{3}}}{25\cdot c_{j+\frac{2}{3}}\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}^2} & -\frac{5\cdot c_{nn, j+\frac{2}{3}}}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}} \end{bmatrix}\begin{bmatrix} \frac{12}{\Delta s} \cdot q_j + 3\cdot k_{n1}^{(1)} \\ \frac{12}{\Delta s} \cdot p_j + 3\cdot k_{n1}^{(2)} \end{bmatrix}                                                                                                                                                                                                                                        \\
 	\therefore k_{n2} & = \begin{bmatrix} -\frac{5\cdot c_{nn, j+\frac{2}{3}}\cdot\left(\frac{12}{\Delta s} \cdot q_j + 3\cdot k_{n1}^{(1)} \right)}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}} + \frac{c^2_{j+\frac{2}{3}}\cdot\left(\frac{12}{\Delta s} \cdot p_j + 3\cdot k_{n1}^{(2)}  \right)}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}}  \\ -\frac{c_{nn, j+\frac{2}{3}}\cdot\left(\frac{12}{\Delta s} \cdot q_j + 3\cdot k_{n1}^{(1)} \right)}{25\cdot c_{j+\frac{2}{3}}\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}^2} - \frac{5\cdot c_{nn, j+\frac{2}{3}}\cdot \left(\frac{12}{\Delta s}p_j + 3\cdot k_{n1}^{(2)}  \right)}{25\cdot c_{nn, j+\frac{2}{3}} + c_{j+\frac{2}{3}}} \end{bmatrix}
 \end{align*}
-\subsection{Radau IIA (3)}
+\subsubsection{Radau IIA (3)}
 \begin{center}
 	\begin{tabular}{c|c c}
 		$\frac{1}{3}$ & $\frac{5}{12}$ & $-\frac{1}{12}$ \\
@@ -351,27 +351,27 @@ Now calculate $k_{n2}$.
 	\end{tabular}
 \end{center}
 \begin{align*}
-	\bm{x}_{n+1} & = \bm{x}_n + \frac{1}{4}\cdot(3\cdot F_1 + F_2)                                                      \\
-	F_1          & = \Delta s\cdot f\left(s_n + \frac{\Delta s}{3}, \bm{x}_n + \frac{5}{12}F_1 - \frac{1}{12}F_2\right) \\
-	F_2          & = \Delta s\cdot f\left(s_n + \Delta s, \bm{x}_n + \frac{3}{4}F_1 + \frac{1}{4}F_2\right)             \\
-	             & = \Delta s f\left(s_{n+1}, \bm{x}_{n+1}\right)
+	\bm{x}_{n+1} & = \bm{x}_n + \frac{1}{4}\cdot(3\cdot F_1 + F_2)                                                           \\
+	F_1          & = \Delta s\cdot \bm{f}\left(s_n + \frac{\Delta s}{3}, \bm{x}_n + \frac{5}{12}F_1 - \frac{1}{12}F_2\right) \\
+	F_2          & = \Delta s\cdot \bm{f}\left(s_n + \Delta s, \bm{x}_n + \frac{3}{4}F_1 + \frac{1}{4}F_2\right)             \\
+	             & = \Delta s \bm{f}\left(s_{n+1}, \bm{x}_{n+1}\right)
 \end{align*}
 Rearrange for a solvable form.
 \begin{align*}
-	\bm{x}_{n+1}                               & = \bm{x}_n + \frac{1}{4}\cdot(3\cdot F_1 + F_2)                                                                                                                                                              \\
-	                                           & = \bm{x}_n + \frac{3}{4}F_1 + \frac{\Delta s}{4}f\left(s_{n+1}, \bm{x}_{n+1}\right),\;\;\textcolor{gray}{\bm{x}_n+\frac{3}{4}F_1+\frac{1}{3}F_2=\bm{x}_{n+1}}                                                \\
-	\implies F_1                               & = \frac{4}{3}\bm{x}_{n+1}-\frac{4}{3}\bm{x}_n-3\cdot\Delta sf\left(s_{n+1}, \bm{x}_{n+1}\right)                                                                                                              \\
-	\implies \frac{5}{12}F_1                   & = \frac{5}{9}\bm{x}_{n+1}-\frac{5}{9}\bm{x}_n-\frac{5}{36}\Delta s\cdot f\left(s_{n+1}, \bm{x}_{n+1}\right)                                                                                                  \\
-	\bm{x}_n + \frac{5}{12}F_1-\frac{1}{12}F_2 & = \bm{x}_n \left[\frac{5}{9}\bm{x}_{n+1}-\frac{5}{9}\bm{x}_n-\frac{5}{36}\Delta s\cdot f(s_{n+1}, \bm{x}_{n+1}) \right]-\frac{1}{12}\Delta s f(s_{n+1}, \bm{x}_{n+1})                                        \\
-	                                           & = \frac{4}{9}\bm{x}_n+\frac{5}{9}\bm{x}_{n+1}-\frac{2}{9}\Delta s f(s_{n+1}, \bm{x}_{n+1})                                                                                                                   \\
-	\therefore F_1                             & = \Delta s f\left(s_{n}+\frac{\Delta s}{3}, \frac{4}{9}\bm{x}_n+\frac{5}{9}\bm{x}_{n+1}-\frac{2}{9}\Delta s f(s_{n+1}, \bm{x}_{n+1})\right)                                                                  \\
-	\therefore \bm{x}_{n+1}                    & = \bm{x}_n + \frac{3\cdot \Delta s}{4}f\left(s_{n}+\frac{\Delta s}{3}, \frac{4}{9}\bm{x}_n+\frac{5}{9}\bm{x}_{n+1}-\frac{2}{9}\Delta s f(s_{n+1}, \bm{x}_{n+1})\right) + \frac{1}{4}f(s_{n+1}, \bm{x}_{n+1})
+	\bm{x}_{n+1}                               & = \bm{x}_n + \frac{1}{4}\cdot(3\cdot F_1 + F_2)                                                                                                                                                                             \\
+	                                           & = \bm{x}_n + \frac{3}{4}F_1 + \frac{\Delta s}{4}\bm{f}\left(s_{n+1}, \bm{x}_{n+1}\right),\;\;\textcolor{gray}{\bm{x}_n+\frac{3}{4}F_1+\frac{1}{3}F_2=\bm{x}_{n+1}}                                                          \\
+	\implies F_1                               & = \frac{4}{3}\bm{x}_{n+1}-\frac{4}{3}\bm{x}_n-3\cdot\Delta s\bm{f}\left(s_{n+1}, \bm{x}_{n+1}\right)                                                                                                                        \\
+	\implies \frac{5}{12}F_1                   & = \frac{5}{9}\bm{x}_{n+1}-\frac{5}{9}\bm{x}_n-\frac{5}{36}\Delta s\cdot \bm{f}\left(s_{n+1}, \bm{x}_{n+1}\right)                                                                                                            \\
+	\bm{x}_n + \frac{5}{12}F_1-\frac{1}{12}F_2 & = \bm{x}_n \left[\frac{5}{9}\bm{x}_{n+1}-\frac{5}{9}\bm{x}_n-\frac{5}{36}\Delta s\cdot \bm{f}(s_{n+1}, \bm{x}_{n+1}) \right]-\frac{1}{12}\Delta s \bm{f}(s_{n+1}, \bm{x}_{n+1})                                             \\
+	                                           & = \frac{4}{9}\bm{x}_n+\frac{5}{9}\bm{x}_{n+1}-\frac{2}{9}\Delta s \bm{f}(s_{n+1}, \bm{x}_{n+1})                                                                                                                             \\
+	\therefore F_1                             & = \Delta s \bm{f}\left(s_{n}+\frac{\Delta s}{3}, \frac{4}{9}\bm{x}_n+\frac{5}{9}\bm{x}_{n+1}-\frac{2}{9}\Delta s \bm{f}(s_{n+1}, \bm{x}_{n+1})\right)                                                                       \\
+	\therefore \bm{x}_{n+1}                    & = \bm{x}_n + \frac{3\cdot \Delta s}{4}\bm{f}\left(s_{n}+\frac{\Delta s}{3}, \frac{4}{9}\bm{x}_n+\frac{5}{9}\bm{x}_{n+1}-\frac{2}{9}\Delta s \bm{f}(s_{n+1}, \bm{x}_{n+1})\right) + \frac{1}{4}\bm{f}(s_{n+1}, \bm{x}_{n+1})
 \end{align*}
 Now translate the $p-q$ equations into the above form.
 \begin{align*}
 	\bm{x}_j                                                                       & =\begin{bmatrix} q_{j} \\ p_{j} \end{bmatrix}                                                                                                                                                                                                \\
 	f(s_{j}, \bm{x}_j)                                                             & = \begin{bmatrix} 0 & c_{j} \\ -\frac{c_{nn, j}}{c_j^2} & 0\end{bmatrix}\begin{bmatrix}q_j \\ p_j\end{bmatrix} = A_j\bm{x}_j\textcolor{gray}{\;\;A_j=A(s_j)}                                                           \\
-	\bm{x}_{j+1}                                                                   & = \bm{x}_j + \frac{3\cdot \Delta s}{4}f\left(s_{j}+\frac{\Delta s}{3}, \frac{4}{9}\bm{x}_j+\frac{5}{9}\bm{x}_{j+1}-\frac{2}{9}\Delta s f(s_{j+1}, \bm{x}_{j+1})\right) + \frac{1}{4}f(s_{j+1}, \bm{x}_{j+1})                                 \\
+	\bm{x}_{j+1}                                                                   & = \bm{x}_j + \frac{3\cdot \Delta s}{4}f\left(s_{j}+\frac{\Delta s}{3}, \frac{4}{9}\bm{x}_j+\frac{5}{9}\bm{x}_{j+1}-\frac{2}{9}\Delta s \bm{f}(s_{j+1}, \bm{x}_{j+1})\right) + \frac{1}{4}\bm{f}(s_{j+1}, \bm{x}_{j+1})                       \\
 	                                                                               & =\bm{x}_j + \frac{3\cdot\Delta s}{4}A_{j+\frac{1}{3}}\left(\frac{4}{9}\bm{x}_j + \frac{5}{9}\bm{x}_{j+1}-\frac{2}{9}\Delta sA_{j+1}\bm{x}_{j+1}\right) + \frac{\Delta s}{4}A_{j+1}\bm{x}_{j+1}                                               \\
 	                                                                               & = \bm{x}_j + \frac{3\cdot\Delta s}{4}A_{j+\frac{1}{3}}\left(\frac{4}{9}\bm{x}_j + \left(\frac{5}{9}\mathbb{I}-\frac{2\cdot\Delta s}{9}A_{j+1}\right)\bm{x}_{j+1} \right) + \frac{\Delta s}{4}A_{j+1}\bm{x}_{j+1}                             \\
 	                                                                               & = \left(\mathbb{I} + \frac{\Delta s}{3}A_{j+\frac{1}{3}}\right)\bm{x}_j + \left(\frac{3\cdot\Delta s}{4}A_{j+\frac{1}{3}}\left(\frac{5}{9}\mathbb{I}-\frac{2\cdot\Delta s}{9}A_{j+1}\right)+\frac{\Delta s}{4}A_{j+1}\right)\bm{x}_{j+1}     \\
