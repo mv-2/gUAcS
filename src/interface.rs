@@ -42,8 +42,8 @@ pub struct EnvConfig {
     pub swell_height: f64,
     #[pyo3(get, set)]
     pub bodies: Vec<Body>,
-    // #[pyo3(get, set)]
-    // pub halfspaces: Vec<HalfSpace>,
+    #[pyo3(get, set)]
+    pub isospaces: Vec<IsoSpace>,
 }
 
 /// Stores information of single source in sound field
@@ -63,6 +63,18 @@ pub struct SourceConfig {
     pub source_level: f64,
     #[pyo3(get, set)]
     pub frequency: f64,
+}
+
+/// Constant property space. Implementation will be usable for RF simulation as well
+#[derive(Deserialize, Debug, Clone)]
+#[pyclass]
+pub struct IsoSpace {
+    #[pyo3(get, set)]
+    pub body: Body,
+    #[pyo3(get, set)]
+    pub sound_speed: f64,
+    #[pyo3(get, set)]
+    pub density: f64,
 }
 
 // Python __new__ constructors for required structs
@@ -99,17 +111,17 @@ impl Body {
     }
 }
 
-// #[pymethods]
-// impl HalfSpace {
-//     #[new]
-//     fn py_new(body: Body, sound_speed: f64, density: f64) -> Self {
-//         HalfSpace {
-//             body,
-//             sound_speed,
-//             density,
-//         }
-//     }
-// }
+#[pymethods]
+impl IsoSpace {
+    #[new]
+    fn py_new(body: Body, sound_speed: f64, density: f64) -> Self {
+        IsoSpace {
+            body,
+            sound_speed,
+            density,
+        }
+    }
+}
 
 #[pymethods]
 impl Ssp {
@@ -126,17 +138,12 @@ impl Ssp {
 #[pymethods]
 impl EnvConfig {
     #[new]
-    fn py_new(
-        bodies: Vec<Body>,
-        ssp: Ssp,
-        swell_height: f64,
-        //halfspaces: Vec<HalfSpace>
-    ) -> Self {
+    fn py_new(bodies: Vec<Body>, ssp: Ssp, swell_height: f64, isospaces: Vec<IsoSpace>) -> Self {
         EnvConfig {
             bodies,
             ssp,
             swell_height,
-            // halfspaces,
+            isospaces,
         }
     }
 }

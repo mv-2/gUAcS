@@ -38,7 +38,7 @@ fn guacs(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<SourceConfig>()?;
     m.add_class::<Ssp>()?;
     m.add_class::<Body>()?;
-    // m.add_class::<HalfSpace>()?;
+    m.add_class::<IsoSpace>()?;
     m.add_class::<Ray>()?;
     m.add_class::<PyBeam>()?;
     Ok(())

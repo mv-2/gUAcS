@@ -253,6 +253,15 @@ impl Ray {
         // set initial sound speed values
         c_i = ssp.interp_sound_speed(ray.depth_vals[0]);
 
+        for i in 0..env_config.isospaces.len() {
+            if env_config.isospaces[i]
+                .body
+                .contains_point(&ray.range_vals[0], &ray.depth_vals[0])
+            {
+                todo!();
+            }
+        }
+
         while (ray.ray_iter < prog_config.max_it - init_source.init_iter)
             && (init_source
                 .range_lims
@@ -364,7 +373,7 @@ impl Body {
             .map(|(id, _)| id);
         // Check if valid minimiser id exists
         match edge_id {
-            // if valid minimiser exists then check if hit distance is valid _rhswise return None
+            // if valid minimiser exists then check if hit distance is valid otherwise return None
             Some(id) => match edge_param_range.contains(&ray_dists_numeric[id]) {
                 true => Some(IntersectLoc {
                     range: ray.range_vals[ray.ray_iter] + ray_dists_numeric[id] * ray_range_step,
@@ -405,6 +414,64 @@ impl Body {
             true => ang - f64::consts::PI,
             false => ang,
         }
+    }
+
+    /// check for intersection with side i
+    fn intersects_dist(
+        &self,
+        ray_range_vals: [f64; 2],
+        ray_depth_vals: [f64; 2],
+        edge_id: usize,
+    ) -> Option<f64> {
+        let edge_param_range: RangeInclusive<f64> = RangeInclusive::new(0.0, 1.0);
+        let edge_depth_vals: [f64; 2] = [self.depth_vals[edge_id], self.depth_vals[edge_id + 1]];
+        let edge_range_vals: [f64; 2] = [self.range_vals[edge_id], self.range_vals[edge_id + 1]];
+        let edge_depth_step: f64 = edge_depth_vals[1] - edge_depth_vals[0];
+        let edge_range_step: f64 = edge_range_vals[1] - edge_range_vals[0];
+        let ray_range_step: f64 = ray_range_vals[1] - ray_range_vals[0];
+        let ray_depth_step: f64 = ray_depth_vals[1] - ray_depth_vals[0];
+
+        if (edge_range_step / edge_depth_step) != (ray_range_step / ray_depth_step) {
+            let edge_dist: f64 = (edge_range_step * ray_depth_step
+                - edge_depth_step * ray_range_step)
+                / (edge_depth_step * ray_range_step - edge_range_step * ray_depth_step);
+            if edge_param_range.contains(&edge_dist) {
+                return match ray_range_step != 0.0 {
+                    true => intersection_ray_dist_param(
+                        edge_dist,
+                        edge_range_step,
+                        ray_range_step,
+                        edge_range_vals[0],
+                        ray_range_vals[0],
+                    ),
+                    false => intersection_ray_dist_param(
+                        edge_dist,
+                        edge_depth_step,
+                        ray_depth_step,
+                        edge_range_vals[0],
+                        ray_depth_vals[0],
+                    ),
+                };
+            }
+        }
+        None
+    }
+
+    /// Calculates if point at range [m] and depth [m] is inside of polygon shape
+    fn contains_point(&self, range: &f64, depth: &f64) -> bool {
+        // cast vertical ray above surface
+        let ray_range_vals: [f64; 2] = [*range, *range];
+        let ray_depth_vals: [f64; 2] = [*depth, -1.0];
+        let mut valid_count: u8 = 0;
+        for i in 0..(self.range_vals.len() - 1) {
+            if self
+                .intersects_dist(ray_range_vals, ray_depth_vals, i)
+                .is_some()
+            {
+                valid_count += 1;
+            }
+        }
+        (valid_count % 2) == 1
     }
 }
 
