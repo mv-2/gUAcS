@@ -55,13 +55,13 @@ enum SolverMethod {
     Radau3IIA,
 }
 impl SolverMethod {
-    pub fn from_string(str: &str) -> SolverMethod {
+    pub fn from_string(str: &str) -> Option<SolverMethod> {
         match str {
-            "BackwardEuler" => SolverMethod::BackEuler,
-            "RungeKutta4" => SolverMethod::RungeKutta4,
-            "Radau3IA" => SolverMethod::Radau3IA,
-            "Radau3IIA" => SolverMethod::Radau3IIA,
-            _ => panic!("Buffoon"),
+            "BackwardEuler" => Some(SolverMethod::BackEuler),
+            "RungeKutta4" => Some(SolverMethod::RungeKutta4),
+            "Radau3IA" => Some(SolverMethod::Radau3IA),
+            "Radau3IIA" => Some(SolverMethod::Radau3IIA),
+            _ => None,
         }
     }
 }
@@ -87,7 +87,8 @@ impl Beam {
         ssp: &Ssp,
     ) -> Beam {
         let mut beam: Beam = Beam::init_from_configs(init_source, prog_config);
-        let pq_solver: SolverMethod = SolverMethod::from_string(&prog_config.pq_solver[..]);
+        let method: SolverMethod = SolverMethod::from_string(&prog_config.pq_solver[..])
+            .expect("Requested p-q solver method is not defined");
         let mut c_i: f64;
         let mut c_i1: f64;
         let mut c_i2: f64;
@@ -115,15 +116,19 @@ impl Beam {
         {
             // calculate local sound speed gradient
             g_i = (c_i1 - c_i) / prog_config.depth_step;
+            let arc_step: f64 = (((beam.central_ray.ray_param * c_i1).asin()
+                - (beam.central_ray.ray_param * c_i).asin())
+                / (g_i * beam.central_ray.ray_param))
+                .abs();
             // Update p-q equations
             beam.update_pq(
                 &c_i,
                 &c_i1,
                 &c_im1,
                 &c_i2,
-                &g_i,
+                &arc_step,
                 &prog_config.depth_step,
-                &pq_solver,
+                &method,
             );
             // iterate depth step. Match statement to update ssp variables as required
             match beam.central_ray.update_iteration(
@@ -184,22 +189,22 @@ impl Beam {
         c_i1: &f64,
         c_im1: &f64,
         c_i2: &f64,
-        g_i: &f64,
+        arc_step: &f64,
         depth_step: &f64,
         method: &SolverMethod,
     ) {
         match method {
             SolverMethod::RungeKutta4 => {
-                self.update_pq_rk4(c_i, c_i1, c_im1, c_i2, g_i, depth_step);
+                self.update_pq_rk4(c_i, c_i1, c_im1, c_i2, arc_step, depth_step);
             }
             SolverMethod::Radau3IA => {
-                self.update_pq_radau3_ia(c_i, c_i1, c_im1, c_i2, g_i, depth_step);
+                self.update_pq_radau3_ia(c_i, c_i1, c_im1, c_i2, arc_step, depth_step);
             }
             SolverMethod::BackEuler => {
-                self.update_pq_back_euler(c_i, c_i1, c_i2, g_i, depth_step);
+                self.update_pq_back_euler(c_i, c_i1, c_i2, arc_step, depth_step);
             }
             SolverMethod::Radau3IIA => {
-                self.update_pq_radau3_iia(c_i, c_i1, c_im1, c_i2, g_i, depth_step);
+                self.update_pq_radau3_iia(c_i, c_i1, c_im1, c_i2, arc_step, depth_step);
             }
         }
     }
@@ -211,18 +216,10 @@ impl Beam {
         c_i1: &f64,
         c_im1: &f64,
         c_i2: &f64,
-        g_i: &f64,
+        arc_step: &f64,
         depth_step: &f64,
     ) {
         let c_i1_2: f64 = (c_i1 + c_i) / 2.0;
-        // Calculate arc length in last depth step
-        let arc_step: f64 = ((self.central_ray.ray_param * c_i1 + 1.0)
-            * (self.central_ray.ray_param * c_i - 1.0)
-            / ((self.central_ray.ray_param * c_i1 - 1.0)
-                * (self.central_ray.ray_param * c_i + 1.0)))
-            .abs()
-            .ln()
-            / (2.0 * g_i * self.central_ray.ray_param);
         // RK4 Method for now
         //calculate 2nd derivate of SSP wrt normal for steps j, j+1/2 and j+1
         let c_nn_j: f64 =
@@ -261,36 +258,35 @@ impl Beam {
         c_i1: &f64,
         c_im1: &f64,
         c_i2: &f64,
-        g_i: &f64,
+        arc_step: &f64,
         depth_step: &f64,
     ) {
-        let arc_step: f64 = (((self.central_ray.ray_param * c_i1).asin()
-            - (self.central_ray.ray_param * c_i).asin())
-            / (g_i * self.central_ray.ray_param))
-            .abs();
-        let c_i1_3 = (c_i1 + c_i + c_i) / 3.0;
+        let c_i1_3: f64 = (c_i1 + c_i + c_i) / 3.0;
         let c_nn_i: f64 =
-            -self.central_ray.ray_param * c_i * (c_i1 - 2.0 * c_i + c_im1) / depth_step.powi(2);
+            -self.central_ray.ray_param * c_i * (c_i1 - c_i - c_i + c_im1) / depth_step.powi(2);
         let c_nn_i1: f64 =
-            -self.central_ray.ray_param * c_i1 * (c_i2 - 2.0 * c_i1 + c_i) / depth_step.powi(2);
-        let c_nn_i1_3: f64 = (c_nn_i + c_nn_i + c_nn_i1) / 3.0;
-        let matrix_bj: Mat2<f64> = Mat2 {
-            a: 1.0 - arc_step.powi(2) * c_nn_i1 * c_i1_3 / (6.0 * c_i1.powi(2)),
-            b: arc_step * (5.0 * c_i1_3 + 3.0 * c_i1) / 12.0,
-            c: -arc_step * (5.0 * c_nn_i1_3 / c_i1_3.powi(2) + 3.0 * c_nn_i1 / c_i1.powi(2)) / 12.0,
-            d: 1.0 - arc_step.powi(2) * c_i1 * c_nn_i1_3 / (6.0 * c_i1_3.powi(2)),
+            -self.central_ray.ray_param * c_i1 * (c_i2 - c_i1 - c_i1 + c_i) / depth_step.powi(2);
+        let c_nn_i1_3: f64 = (c_nn_i1 + c_nn_i + c_nn_i) / 3.0;
+        let mat_ai1: Mat2<f64> = Mat2 {
+            a: 0_f64,
+            b: *c_i1,
+            c: -c_nn_i1 / c_i1.powi(2),
+            d: 0_f64,
         };
-        let matrix_bj_inv: Mat2<f64> = matrix_bj.inv();
-        let matrix_c: Mat2<f64> = Mat2 {
-            a: 1.0,
-            b: arc_step * c_i1_3 / 3.0,
-            c: -arc_step * c_nn_i1_3 / (3.0 * c_nn_i1_3.powi(2)),
-            d: 1.0,
+        let mat_ai1_3: Mat2<f64> = Mat2 {
+            a: 0_f64,
+            b: c_i1_3,
+            c: -c_nn_i1_3 / c_i1_3.powi(2),
+            d: 0_f64,
         };
-        let matmul: Mat2<f64> = matrix_bj_inv.mul22(&matrix_c);
-        let j: usize = self.central_ray.ray_iter;
-        self.q_vals[j + 1] = matmul.a * self.q_vals[j] + matmul.b * self.p_vals[j];
-        self.p_vals[j + 1] = matmul.c * self.q_vals[j] + matmul.d * self.p_vals[j];
+        let coeff_mat: Mat2<f64> = (Mat2::I
+            - (arc_step / 12_f64)
+                * (5_f64 * mat_ai1_3 - 2_f64 * mat_ai1_3 * mat_ai1 + 3_f64 * mat_ai1))
+            .inv()
+            * (Mat2::I + (arc_step / 4_f64) * mat_ai1_3);
+        let i: usize = self.central_ray.ray_iter;
+        self.q_vals[i + 1] = coeff_mat.a * self.q_vals[i] + coeff_mat.b * self.p_vals[i];
+        self.p_vals[i + 1] = coeff_mat.c * self.q_vals[i] + coeff_mat.d * self.p_vals[i];
     }
 
     /// Radau3IA Solver
@@ -300,16 +296,9 @@ impl Beam {
         c_i1: &f64,
         c_im1: &f64,
         c_i2: &f64,
-        g_i: &f64,
+        arc_step: &f64,
         depth_step: &f64,
     ) {
-        let arc_step: f64 = ((self.central_ray.ray_param * c_i1 + 1.0)
-            * (self.central_ray.ray_param * c_i - 1.0)
-            / ((self.central_ray.ray_param * c_i1 - 1.0)
-                * (self.central_ray.ray_param * c_i + 1.0)))
-            .abs()
-            .ln()
-            / (2.0 * g_i * self.central_ray.ray_param);
         let c_i2_3 = (c_i1 + c_i1 + c_i) / 3.0;
         let c_nn_i: f64 =
             -self.central_ray.ray_param * c_i * (c_i1 - 2.0 * c_i + c_im1) / depth_step.powi(2);
@@ -353,16 +342,9 @@ impl Beam {
         c_i: &f64,
         c_i1: &f64,
         c_i2: &f64,
-        g_i: &f64,
+        arc_step: &f64,
         depth_step: &f64,
     ) {
-        let arc_step: f64 = ((self.central_ray.ray_param * c_i1 + 1.0)
-            * (self.central_ray.ray_param * c_i - 1.0)
-            / ((self.central_ray.ray_param * c_i1 - 1.0)
-                * (self.central_ray.ray_param * c_i + 1.0)))
-            .abs()
-            .ln()
-            / (2.0 * g_i * self.central_ray.ray_param);
         let c_nn_i1: f64 =
             -self.central_ray.ray_param * c_i1 * (c_i2 - 2.0 * c_i1 + c_i) / depth_step.powi(2);
         let coeff: f64 = c_i1 / (1.0 - arc_step.powi(2) * c_nn_i1);

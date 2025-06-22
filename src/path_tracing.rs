@@ -364,7 +364,7 @@ impl Body {
             .map(|(id, _)| id);
         // Check if valid minimiser id exists
         match edge_id {
-            // if valid minimiser exists then check if hit distance is valid otherwise return None
+            // if valid minimiser exists then check if hit distance is valid _rhswise return None
             Some(id) => match edge_param_range.contains(&ray_dists_numeric[id]) {
                 true => Some(IntersectLoc {
                     range: ray.range_vals[ray.ray_iter] + ray_dists_numeric[id] * ray_range_step,

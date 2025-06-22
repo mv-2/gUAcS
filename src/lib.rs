@@ -1,8 +1,9 @@
-use pyo3::prelude::*;
 pub mod beam_tracing;
 pub mod interface;
 pub mod math_util;
 pub mod path_tracing;
+
+use pyo3::prelude::*;
 use rayon::prelude::*;
 
 use crate::beam_tracing::{trace_beams, PyBeam};

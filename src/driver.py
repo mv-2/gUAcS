@@ -53,17 +53,20 @@ def plot_environment(cfg_file: Config) -> list:
     ax_ssp.set_ylabel("Depth [$m$]")
     ax_ssp.set_xlabel("Sound speed [$m.s^{-1}$]")
     ax_ssp.plot(c_profile, depth_range, c="blue")
-    ax_g = ax_ssp.twiny()
-    ax_rays = ax[1]
-    ax_g.set_xlabel("Sound gradient [$s^{-1}$]")
-    ax_rays.set_xlabel("Range [$km$]")
 
+    ax_g = ax_ssp.twiny()
     ax_g.plot(g_profile, depth_range, c="red")
+    ax_g.set_xlabel("Sound gradient [$s^{-1}$]")
+
+    ax_rays = ax[1]
     for bd in bodies:
         ax_rays.fill([rv / 1000 for rv in bd.range_vals], bd.depth_vals, c="r")
+
+    ax_rays.set_xlabel("Range [$km$]")
     ax_rays.set_xlim(
         [cfg_file.prog_config.min_range / 1000, cfg_file.prog_config.max_range / 1000]
     )
+
     return [fig, ax_rays, ax_ssp, ax_g]
 
 
@@ -146,7 +149,7 @@ if __name__ == "__main__":
             ray_fan_limits=(-0.2, 0.2),
             n_rays=1,
             source_level=150,
-            frequency=500,
+            frequency=1000,
         )
     ]
 
@@ -178,10 +181,10 @@ if __name__ == "__main__":
 
     max_depth = 5000
     depth_step = 100
-    munk_depths = range(-2 * depth_step, max_depth + 3 * depth_step, depth_step)
-    munk_vals = [downward_refract(z) for z in munk_depths]
+    ssp_depths = range(-2 * depth_step, max_depth + 3 * depth_step, depth_step)
+    ssp_vals = [munk_profile(z) for z in ssp_depths]
 
-    (ssp_knots, ssp_coefs, ssp_degree) = splrep(munk_depths, munk_vals, k=3)
+    (ssp_knots, ssp_coefs, ssp_degree) = splrep(ssp_depths, ssp_vals, k=3)
 
     env_config = EnvConfig(
         bodies=bodies,
@@ -205,5 +208,7 @@ if __name__ == "__main__":
     rays = [bm.central_ray for bm in beams]
     rays = fix_rays(rays)
     ray_fig = plot_rays(config, rays)
-    pq_fig = plot_pq(beams[0])  # animate_propagation(config, rays, 10)
+    pq_fig = plot_pq(beams[0])
+    animate_propagation(config, rays, 10)
+    plt.close(1)
     plt.show()
