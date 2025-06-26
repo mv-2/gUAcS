@@ -6,7 +6,7 @@ from guacs import (
     EnvConfig,
     SourceConfig,
     Body,
-    # HalfSpace,
+    IsoSpace,
     Ssp,
     # Ray,
     PyBeam,
@@ -40,6 +40,7 @@ def plot_environment(cfg_file: Config) -> list:
     fig, ax = plt.subplots(1, 2, sharey=True, gridspec_kw={"width_ratios": [1, 4]})
     bodies = cfg_file.env_config.bodies
     ssp = cfg_file.env_config.ssp
+    isospaces = cfg_file.env_config.isospaces
     knots = ssp.ssp_knots
     coefs = ssp.ssp_coefs
     degree = ssp.ssp_degree
@@ -61,6 +62,11 @@ def plot_environment(cfg_file: Config) -> list:
     ax_rays = ax[1]
     for bd in bodies:
         ax_rays.fill([rv / 1000 for rv in bd.range_vals], bd.depth_vals, c="r")
+
+    for ispc in isospaces:
+        ax_rays.fill(
+            [rv / 1000 for rv in ispc.body.range_vals], ispc.body.depth_vals, c="orange"
+        )
 
     ax_rays.set_xlabel("Range [$km$]")
     ax_rays.set_xlim(
@@ -168,16 +174,16 @@ if __name__ == "__main__":
         ),
     ]
 
-    # halfspaces = [
-    #     HalfSpace(
-    #         body=Body(
-    #             range_vals=[0.0, 100000.0, 100000.0, 0.0, 0.0],
-    #             depth_vals=[5000.0, 5000.0, 5100.0, 5100.0, 5000.0],
-    #         ),
-    #         sound_speed=1600.0,
-    #         density=1.5,
-    #     )
-    # ]
+    isospaces = [
+        IsoSpace(
+            body=Body(
+                range_vals=[-100.0, 100000.0, 100000.0, -100.0, -100.0],
+                depth_vals=[0.0, 0.0, 5000.0, 5000.0, 0.0],
+            ),
+            sound_speed=1600.0,
+            density=1.5,
+        )
+    ]
 
     max_depth = 5000
     depth_step = 100
@@ -190,7 +196,7 @@ if __name__ == "__main__":
         bodies=bodies,
         ssp=Ssp(ssp_knots=ssp_knots, ssp_coefs=ssp_coefs, ssp_degree=ssp_degree),
         swell_height=0.0,
-        # halfspaces=halfspaces,
+        isospaces=isospaces,
     )
 
     prog_config = ProgConfig(
@@ -203,12 +209,12 @@ if __name__ == "__main__":
     )
 
     config = Config(prog_config=prog_config, env_config=env_config, sources=sources)
-    # rays = trace_rays(config)
-    beams = trace_beams(config)
-    rays = [bm.central_ray for bm in beams]
+    rays = trace_rays(config)
+    # beams = trace_beams(config)
+    # rays = [bm.central_ray for bm in beams]
     rays = fix_rays(rays)
     ray_fig = plot_rays(config, rays)
-    pq_fig = plot_pq(beams[0])
+    # pq_fig = plot_pq(beams[0])
     animate_propagation(config, rays, 10)
     plt.close(1)
     plt.show()

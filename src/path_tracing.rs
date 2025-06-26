@@ -1,4 +1,4 @@
-use crate::interface::{Config, EnvConfig, ProgConfig, SourceConfig};
+use crate::interface::{Config, EnvConfig, IsoSpace, ProgConfig, SourceConfig};
 use crate::math_util::deboor_alg;
 use core::f64;
 use csv::Writer;
@@ -258,7 +258,10 @@ impl Ray {
                 .body
                 .contains_point(&ray.range_vals[0], &ray.depth_vals[0])
             {
-                todo!();
+                ray.iso_trace(&env_config.isospaces[i]);
+                ray.ray_iter += 1;
+                ray.truncate_ray();
+                return ray;
             }
         }
 
@@ -295,6 +298,57 @@ impl Ray {
         // truncate vectors to remove any wasted space
         ray.truncate_ray();
         ray
+    }
+
+    /// Trace straight ray through constant SSP areas of [`IsoSpace`]
+    fn iso_trace(&mut self, iso_space: &IsoSpace) {
+        //TODO: implement something to make max/min methods more terse
+        let range_min: f64 = iso_space
+            .body
+            .range_vals
+            .iter()
+            .cloned()
+            .fold(f64::INFINITY, |a, b| a.min(b));
+        let range_max: f64 = iso_space
+            .body
+            .range_vals
+            .iter()
+            .cloned()
+            .fold(f64::NEG_INFINITY, f64::max);
+        let depth_min: f64 = iso_space
+            .body
+            .depth_vals
+            .iter()
+            .cloned()
+            .fold(f64::INFINITY, |a, b| a.min(b));
+        let depth_max: f64 = iso_space
+            .body
+            .depth_vals
+            .iter()
+            .cloned()
+            .fold(f64::NEG_INFINITY, f64::max);
+
+        // Set ray endpoint outside of IsoSpace object
+        self.range_vals[self.ray_iter + 1] = self.range_vals[self.ray_iter] + range_max - range_min;
+        self.depth_vals[self.ray_iter + 1] = self.depth_vals[self.ray_iter] + depth_max - depth_min;
+
+        // Update ray location and time with intersection
+        match iso_space.body.check_finite_intersection(self) {
+            Some(loc) => {
+                self.range_vals[self.ray_iter + 1] = loc.range;
+                self.depth_vals[self.ray_iter + 1] = loc.depth;
+                self.time_vals[self.ray_iter + 1] =
+                    ((self.range_vals[self.ray_iter + 1] - self.range_vals[self.ray_iter]).powi(2)
+                        + (self.range_vals[self.ray_iter + 1] - self.range_vals[self.ray_iter])
+                            .powi(2))
+                    .sqrt()
+                        / iso_space.sound_speed;
+            }
+            None => panic!(
+                "No intersection found in IsoSpace object for ray {:}",
+                self.ray_id
+            ),
+        }
     }
 
     pub fn write_to_csv(&self, output_dir: &String) -> Result<(), Box<dyn Error>> {
@@ -430,11 +484,11 @@ impl Body {
         let edge_range_step: f64 = edge_range_vals[1] - edge_range_vals[0];
         let ray_range_step: f64 = ray_range_vals[1] - ray_range_vals[0];
         let ray_depth_step: f64 = ray_depth_vals[1] - ray_depth_vals[0];
-
         if (edge_range_step / edge_depth_step) != (ray_range_step / ray_depth_step) {
-            let edge_dist: f64 = (edge_range_step * ray_depth_step
-                - edge_depth_step * ray_range_step)
-                / (edge_depth_step * ray_range_step - edge_range_step * ray_depth_step);
+            let edge_dist: f64 = ((self.range_vals[edge_id] - ray_range_vals[0]) * ray_depth_step
+                - (self.depth_vals[edge_id] - ray_depth_vals[0]) * ray_range_step)
+                / ((self.depth_vals[edge_id + 1] - self.depth_vals[edge_id]) * ray_range_step
+                    - (self.range_vals[edge_id + 1] - self.range_vals[edge_id]) * ray_depth_step);
             if edge_param_range.contains(&edge_dist) {
                 return match ray_range_step != 0.0 {
                     true => intersection_ray_dist_param(
@@ -462,7 +516,7 @@ impl Body {
         // cast vertical ray above surface
         let ray_range_vals: [f64; 2] = [*range, *range];
         let ray_depth_vals: [f64; 2] = [*depth, -1.0];
-        let mut valid_count: u8 = 0;
+        let mut valid_count: usize = 0;
         for i in 0..(self.range_vals.len() - 1) {
             if self
                 .intersects_dist(ray_range_vals, ray_depth_vals, i)
