@@ -118,6 +118,7 @@ struct IntersectLoc {
 }
 
 /// Stores result of reflection calculation in [`calculate_reflection()`]
+#[derive(Debug)]
 pub struct ReflectResult {
     pub range: f64,
     pub depth: f64,
@@ -258,8 +259,7 @@ impl Ray {
                 .body
                 .contains_point(&ray.range_vals[0], &ray.depth_vals[0])
             {
-                ray.iso_trace(&env_config.isospaces[i]);
-                ray.ray_iter += 1;
+                ray.iso_trace(&env_config.isospaces[i], prog_config.max_it, &ang);
                 ray.truncate_ray();
                 return ray;
             }
@@ -301,53 +301,57 @@ impl Ray {
     }
 
     /// Trace straight ray through constant SSP areas of [`IsoSpace`]
-    fn iso_trace(&mut self, iso_space: &IsoSpace) {
+    fn iso_trace(&mut self, iso_space: &IsoSpace, max_it: usize, ang: &f64) {
+        // this is dumb
+        let mut ang: f64 = *ang;
         //TODO: implement something to make max/min methods more terse
-        let range_min: f64 = iso_space
-            .body
-            .range_vals
-            .iter()
-            .cloned()
-            .fold(f64::INFINITY, |a, b| a.min(b));
         let range_max: f64 = iso_space
             .body
             .range_vals
             .iter()
-            .cloned()
-            .fold(f64::NEG_INFINITY, f64::max);
-        let depth_min: f64 = iso_space
+            .fold(f64::NEG_INFINITY, |a, &b| f64::max(a, b));
+        let range_min: f64 = iso_space
             .body
-            .depth_vals
+            .range_vals
             .iter()
-            .cloned()
-            .fold(f64::INFINITY, |a, b| a.min(b));
+            .fold(f64::INFINITY, |a, &b| f64::min(a, b));
         let depth_max: f64 = iso_space
             .body
             .depth_vals
             .iter()
-            .cloned()
-            .fold(f64::NEG_INFINITY, f64::max);
+            .fold(f64::NEG_INFINITY, |a, &b| f64::max(a, b));
+        let depth_min: f64 = iso_space
+            .body
+            .depth_vals
+            .iter()
+            .fold(f64::INFINITY, |a, &b| f64::min(a, b));
+        let test_dist: f64 =
+            1.1 * ((range_max - range_min).powi(2) + (depth_max - depth_min).powi(2)).sqrt();
+        while self.ray_iter < max_it {
+            // Set ray endpoint outside of IsoSpace obj
+            self.range_vals[self.ray_iter + 1] =
+                self.range_vals[self.ray_iter] + test_dist * ang.cos();
+            self.depth_vals[self.ray_iter + 1] =
+                self.depth_vals[self.ray_iter] + test_dist * ang.sin();
 
-        // Set ray endpoint outside of IsoSpace object
-        self.range_vals[self.ray_iter + 1] = self.range_vals[self.ray_iter] + range_max - range_min;
-        self.depth_vals[self.ray_iter + 1] = self.depth_vals[self.ray_iter] + depth_max - depth_min;
-
-        // Update ray location and time with intersection
-        match iso_space.body.check_finite_intersection(self) {
-            Some(loc) => {
-                self.range_vals[self.ray_iter + 1] = loc.range;
-                self.depth_vals[self.ray_iter + 1] = loc.depth;
-                self.time_vals[self.ray_iter + 1] =
-                    ((self.range_vals[self.ray_iter + 1] - self.range_vals[self.ray_iter]).powi(2)
-                        + (self.range_vals[self.ray_iter + 1] - self.range_vals[self.ray_iter])
-                            .powi(2))
-                    .sqrt()
-                        / iso_space.sound_speed;
+            // Update ray location and time with intersection
+            match iso_space.body.calculate_reflection(self) {
+                Some(loc) => {
+                    self.range_vals[self.ray_iter + 1] = loc.range;
+                    self.depth_vals[self.ray_iter + 1] = loc.depth;
+                    self.time_vals[self.ray_iter + 1] = self.time_vals[self.ray_iter]
+                        + ((self.range_vals[self.ray_iter + 1] - self.range_vals[self.ray_iter])
+                            .powi(2)
+                            + (self.range_vals[self.ray_iter + 1]
+                                - self.range_vals[self.ray_iter])
+                                .powi(2))
+                        .sqrt()
+                            / iso_space.sound_speed;
+                    ang = loc.ang;
+                }
+                None => panic!("No intesection found in IsoSpace for ray {:}", self.ray_id),
             }
-            None => panic!(
-                "No intersection found in IsoSpace object for ray {:}",
-                self.ray_id
-            ),
+            self.ray_iter += 1;
         }
     }
 

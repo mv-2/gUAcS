@@ -216,5 +216,6 @@ if __name__ == "__main__":
     ray_fig = plot_rays(config, rays)
     # pq_fig = plot_pq(beams[0])
     animate_propagation(config, rays, 10)
+    # plt.show()
     plt.close(1)
-    plt.show()
+    print(len(rays[0].range_vals))

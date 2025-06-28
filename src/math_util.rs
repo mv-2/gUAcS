@@ -1,5 +1,3 @@
-use pyo3::ffi::PyBUF_ND;
-
 /// Calculates value for B-spline based on knots, coefficients, order and position
 pub fn deboor_alg(x: f64, knots: &[f64], coeffs: &[f64], order: usize) -> f64 {
     // Assume that knots are sorted into increasing order
