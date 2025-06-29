@@ -102,15 +102,13 @@ def plot_pq(beam: PyBeam) -> plt.figure:
     return fig
 
 
-def plot_rays(cfg_file: Config, rays: list) -> plt.figure():
+def plot_rays(cfg_file: Config, rays: list):
     fig, ax_rays, ax_ssp, ax_g = plot_environment(cfg_file)
 
     for ray in rays:
         ax_rays.plot(
             np.array(ray.range_vals) / 1000, ray.depth_vals, c="k", linewidth=0.5
         )
-
-    return fig
 
 
 def time_interp_rays(rays: list, time_vals: np.array) -> list:
@@ -152,7 +150,7 @@ if __name__ == "__main__":
         SourceConfig(
             range_pos=0.0,
             depth_pos=1000.0,
-            ray_fan_limits=(-0.2, 0.2),
+            ray_fan_limits=(-0.1, 0.2),
             n_rays=1,
             source_level=150,
             frequency=1000,
@@ -200,7 +198,7 @@ if __name__ == "__main__":
     )
 
     prog_config = ProgConfig(
-        max_it=int(1e5),
+        max_it=int(100),
         depth_step=1.0,
         max_range=2e5,
         min_range=-10.0,
@@ -215,7 +213,6 @@ if __name__ == "__main__":
     rays = fix_rays(rays)
     ray_fig = plot_rays(config, rays)
     # pq_fig = plot_pq(beams[0])
-    animate_propagation(config, rays, 10)
-    # plt.show()
-    plt.close(1)
+    # animate_propagation(config, rays, 10)
+    plt.show()
     print(len(rays[0].range_vals))
