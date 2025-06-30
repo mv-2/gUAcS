@@ -215,4 +215,3 @@ if __name__ == "__main__":
     # pq_fig = plot_pq(beams[0])
     # animate_propagation(config, rays, 10)
     plt.show()
-    print(len(rays[0].range_vals))

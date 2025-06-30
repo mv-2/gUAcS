@@ -381,11 +381,6 @@ impl Ray {
                 None => panic!("No intesection found in IsoSpace for ray {:}", self.ray_id),
             }
             self.ray_iter += 1;
-            println!("------------------------------");
-            println!(
-                "{:}, {:}, {ang}",
-                self.range_vals[self.ray_iter], self.depth_vals[self.ray_iter]
-            );
         }
     }
 
