@@ -24,18 +24,6 @@ pub struct Body {
     // TODO: bounding box values to be added as later optimisation
 }
 
-///// Stores halfspace geometry and physical property data
-//#[derive(Deserialize, Debug, Clone)]
-//#[pyclass]
-//pub struct HalfSpace {
-//    #[pyo3(get, set)]
-//    pub body: Body,
-//    #[pyo3(get, set)]
-//    pub sound_speed: f64,
-//    #[pyo3(get, set)]
-//    pub density: f64,
-//}
-
 /// Stores Ray propagation data
 #[pyclass]
 #[derive(Debug, Clone)]

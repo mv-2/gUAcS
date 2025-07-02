@@ -1,6 +1,6 @@
-from guacs import (
+from guacs.guacs import (
     trace_rays,
-    trace_beams,
+    # trace_beams,
     Config,
     ProgConfig,
     EnvConfig,
@@ -8,13 +8,19 @@ from guacs import (
     Body,
     IsoSpace,
     Ssp,
-    # Ray,
+    Ray,
     PyBeam,
 )
 import numpy as np
 from scipy.interpolate import splev, splrep
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from matplotlib.figure import Figure
+from matplotlib.artist import Artist
+from typing import List, Tuple, Iterable
+import matplotlib
+
+matplotlib.use("QtAgg")
 
 
 def munk_profile(depth: float) -> float:
@@ -28,7 +34,7 @@ def downward_refract(depth: float) -> float:
     return 1677.3319 / np.sqrt(1 + 2.0 * 1.2276762 * depth / 1677.3319)
 
 
-def fix_rays(raw_rays: list) -> list:
+def fix_rays(raw_rays: list) -> List[Ray]:
     for i in range(len(raw_rays)):
         raw_rays[i].range_vals = np.array(raw_rays[i].range_vals)
         raw_rays[i].depth_vals = np.array(raw_rays[i].depth_vals)
@@ -36,7 +42,7 @@ def fix_rays(raw_rays: list) -> list:
     return raw_rays
 
 
-def plot_environment(cfg_file: Config) -> list:
+def plot_environment(cfg_file: Config) -> List:
     fig, ax = plt.subplots(1, 2, sharey=True, gridspec_kw={"width_ratios": [1, 4]})
     bodies = cfg_file.env_config.bodies
     ssp = cfg_file.env_config.ssp
@@ -76,7 +82,7 @@ def plot_environment(cfg_file: Config) -> list:
     return [fig, ax_rays, ax_ssp, ax_g]
 
 
-def plot_pq(beam: PyBeam) -> plt.figure:
+def plot_pq(beam: PyBeam) -> Figure:
     fig, ax = plt.subplots(2, 2)
     iters = list(range(len(beam.p_re)))
     ax[0, 0].plot(iters, beam.p_re)
@@ -102,16 +108,18 @@ def plot_pq(beam: PyBeam) -> plt.figure:
     return fig
 
 
-def plot_rays(cfg_file: Config, rays: list):
-    fig, ax_rays, ax_ssp, ax_g = plot_environment(cfg_file)
+def plot_rays(cfg_file: Config, rays: list) -> Figure:
+    fig, ax_rays, _, _ = plot_environment(cfg_file)
 
     for ray in rays:
         ax_rays.plot(
             np.array(ray.range_vals) / 1000, ray.depth_vals, c="k", linewidth=0.5
         )
 
+    return fig
 
-def time_interp_rays(rays: list, time_vals: np.array) -> list:
+
+def time_interp_rays(rays: list, time_vals: np.ndarray) -> List[Ray]:
     for i in range(len(rays)):
         rays[i].range_vals = np.interp(
             time_vals, rays[i].time_vals, rays[i].range_vals, right=np.nan
@@ -123,21 +131,22 @@ def time_interp_rays(rays: list, time_vals: np.array) -> list:
     return rays
 
 
-def animate_propagation(cfg_file: Config, rays: list, framerate: float):
-    fig, ax_rays, ax_ssp, ax_g = plot_environment(cfg_file)
+def animate_propagation(cfg_file: Config, rays: List[Ray], framerate: float):
+    fig, ax_rays, _, _ = plot_environment(cfg_file)
     max_time = np.nanmax([np.nanmax(ray.time_vals) for ray in rays])
     time_vals = np.arange(0.0, max_time, 1 / framerate)
     rays = time_interp_rays(rays, time_vals)
     n_rays = len(rays)
-    lines = [None] * n_rays
+    lines = [] * n_rays
     for i in range(n_rays):
         (lines[i],) = ax_rays.plot([], [], c="k", linewidth=0.5)
         rays[i].range_vals = np.array(rays[i].range_vals) / 1000
 
-    def update_frame(i):
+    def update_frame(i: int) -> Iterable[Artist]:
         for j in range(n_rays):
             lines[j].set_xdata(rays[j].range_vals[:i])
             lines[j].set_ydata(rays[j].depth_vals[:i])
+        return lines
 
     _ = FuncAnimation(
         fig, update_frame, frames=len(time_vals), interval=1000 / framerate
@@ -188,11 +197,13 @@ if __name__ == "__main__":
     ssp_depths = range(-2 * depth_step, max_depth + 3 * depth_step, depth_step)
     ssp_vals = [munk_profile(z) for z in ssp_depths]
 
-    (ssp_knots, ssp_coefs, ssp_degree) = splrep(ssp_depths, ssp_vals, k=3)
+    spline_res: Tuple = splrep(ssp_depths, ssp_vals, k=3)
 
     env_config = EnvConfig(
         bodies=bodies,
-        ssp=Ssp(ssp_knots=ssp_knots, ssp_coefs=ssp_coefs, ssp_degree=ssp_degree),
+        ssp=Ssp(
+            ssp_knots=spline_res[0], ssp_coefs=spline_res[1], ssp_degree=spline_res[2]
+        ),
         swell_height=0.0,
         isospaces=isospaces,
     )

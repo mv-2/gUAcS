@@ -9,7 +9,7 @@ build:
 # run project and all required build steps
 run:
 	make build
-	python src/driver.py
+	python examples/func_driver.py
 
 # clean all generated files and build
 clean_build:
