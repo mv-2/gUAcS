@@ -146,7 +146,6 @@ impl Beam {
                 DirChange::ChangeDir => {
                     std::mem::swap(&mut c_im1, &mut c_i1);
                     depth_dir = -depth_dir;
-                    println!("{:}", beam.central_ray.ray_iter);
                 }
             };
             // update c_i+2

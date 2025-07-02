@@ -74,28 +74,29 @@ def plot_environment(cfg_file: Config) -> List:
     return [fig, ax_rays, ax_ssp, ax_g]
 
 
-def plot_pq(beam: PyBeam) -> Figure:
+def plot_pq(beams: List[PyBeam]) -> Figure:
     fig, ax = plt.subplots(2, 2)
-    iters = list(range(len(beam.p_re)))
-    ax[0, 0].plot(iters, beam.p_re)
-    ax[0, 0].set_ylabel("Re($p$)")
-    ax[0, 0].set_xlabel("Iterations")
-    ax[0, 0].set_ylim([-1, 1e5])
+    for beam in beams:
+        iters = list(range(len(beam.p_re)))
+        ax[0, 0].plot(iters, beam.p_re)
+        ax[0, 0].set_ylabel("Re($p$)")
+        ax[0, 0].set_xlabel("Iterations")
+        ax[0, 0].set_ylim([-1, 1e5])
 
-    ax[1, 0].plot(iters, beam.p_im)
-    ax[1, 0].set_ylabel("Im($p$)")
-    ax[1, 0].set_xlabel("Iterations")
-    ax[1, 0].set_ylim([-1, 1e5])
+        ax[1, 0].plot(iters, beam.p_im)
+        ax[1, 0].set_ylabel("Im($p$)")
+        ax[1, 0].set_xlabel("Iterations")
+        ax[1, 0].set_ylim([-1, 1e5])
 
-    ax[0, 1].plot(iters, beam.q_re)
-    ax[0, 1].set_ylabel("Re($q$)")
-    ax[0, 1].set_xlabel("Iterations")
-    ax[0, 1].set_ylim([-1, 1e5])
+        ax[0, 1].plot(iters, beam.q_re)
+        ax[0, 1].set_ylabel("Re($q$)")
+        ax[0, 1].set_xlabel("Iterations")
+        ax[0, 1].set_ylim([-1, 1e5])
 
-    ax[1, 1].plot(iters, beam.q_im)
-    ax[1, 1].set_ylabel("Im($q$)")
-    ax[1, 1].set_xlabel("Iterations")
-    ax[1, 1].set_ylim([-1, 1e5])
+        ax[1, 1].plot(iters, beam.q_im)
+        ax[1, 1].set_ylabel("Im($q$)")
+        ax[1, 1].set_xlabel("Iterations")
+        ax[1, 1].set_ylim([-1, 1e5])
 
     return fig
 
