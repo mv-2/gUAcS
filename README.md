@@ -18,4 +18,4 @@ NOTE: This build script is busted.
 
 ## Examples & Theory
 
-For more understanding of the software capability see [examples\examples.ipynb](https://github.com/mv-2/gUAcS/blob/master/examples/examples.ipynb). For details of the theory (which is not always completely up to date) see [docs\theory.pdf](https://github.com/mv-2/gUAcS/blob/master/docs/theory.pdf)
+For more understanding of the software capability see [examples/examples.ipynb](https://github.com/mv-2/gUAcS/blob/master/examples/examples.ipynb). For details of the theory (which is not always completely up to date) see [docs/theory.pdf](https://github.com/mv-2/gUAcS/blob/master/docs/theory.pdf)
