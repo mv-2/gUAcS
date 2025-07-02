@@ -10,10 +10,23 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dependencies = ["numpy", "scipy", "matplotlib", "PyQt5"]
+dependencies = [
+  "numpy",
+  "scipy",
+  "matplotlib",
+  "PyQt5",
+  "jupyter_client",
+  "pynvim",
+  "pnglatex",
+  "pyyaml",
+  "ipykernel",
+]
 dynamic = ["version"]
 [tool.maturin]
 features = ["pyo3/extension-module"]
 [tool.pyright]
 venv = ".venv"
 venvPath = "."
+include = ["examples/*.py"]
+[tool.ruff]
+include = ["pyproject.toml", "examples/*.py"]

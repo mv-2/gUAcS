@@ -8,151 +8,14 @@ from guacs.guacs import (
     Body,
     IsoSpace,
     Ssp,
-    Ray,
-    PyBeam,
 )
-import numpy as np
-from scipy.interpolate import splev, splrep
+from scipy.interpolate import splrep
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-from matplotlib.figure import Figure
-from matplotlib.artist import Artist
-from typing import List, Tuple, Iterable
+from typing import Tuple
 import matplotlib
+from python_utils import munk_profile, fix_rays, plot_rays, animate_propagation
 
 matplotlib.use("QtAgg")
-
-
-def munk_profile(depth: float) -> float:
-    return 1500.0 * (
-        1.0
-        + 0.00737 * (2 * (depth - 1300) / 1500 - 1 + np.exp(-2 * (depth - 1300) / 1500))
-    )
-
-
-def downward_refract(depth: float) -> float:
-    return 1677.3319 / np.sqrt(1 + 2.0 * 1.2276762 * depth / 1677.3319)
-
-
-def fix_rays(raw_rays: list) -> List[Ray]:
-    for i in range(len(raw_rays)):
-        raw_rays[i].range_vals = np.array(raw_rays[i].range_vals)
-        raw_rays[i].depth_vals = np.array(raw_rays[i].depth_vals)
-        raw_rays[i].time_vals = np.array(raw_rays[i].time_vals)
-    return raw_rays
-
-
-def plot_environment(cfg_file: Config) -> List:
-    fig, ax = plt.subplots(1, 2, sharey=True, gridspec_kw={"width_ratios": [1, 4]})
-    bodies = cfg_file.env_config.bodies
-    ssp = cfg_file.env_config.ssp
-    isospaces = cfg_file.env_config.isospaces
-    knots = ssp.ssp_knots
-    coefs = ssp.ssp_coefs
-    degree = ssp.ssp_degree
-    tck = (knots, coefs, degree)
-    depth_range = list(range(0, 5000))
-    c_profile = [splev(depth, tck, der=0) for depth in depth_range]
-    g_profile = [splev(depth, tck, der=1) for depth in depth_range]
-
-    ax_ssp = ax[0]
-    ax_ssp.invert_yaxis()
-    ax_ssp.set_ylabel("Depth [$m$]")
-    ax_ssp.set_xlabel("Sound speed [$m.s^{-1}$]")
-    ax_ssp.plot(c_profile, depth_range, c="blue")
-
-    ax_g = ax_ssp.twiny()
-    ax_g.plot(g_profile, depth_range, c="red")
-    ax_g.set_xlabel("Sound gradient [$s^{-1}$]")
-
-    ax_rays = ax[1]
-    for bd in bodies:
-        ax_rays.fill([rv / 1000 for rv in bd.range_vals], bd.depth_vals, c="r")
-
-    for ispc in isospaces:
-        ax_rays.fill(
-            [rv / 1000 for rv in ispc.body.range_vals], ispc.body.depth_vals, c="orange"
-        )
-
-    ax_rays.set_xlabel("Range [$km$]")
-    ax_rays.set_xlim(
-        [cfg_file.prog_config.min_range / 1000, cfg_file.prog_config.max_range / 1000]
-    )
-
-    return [fig, ax_rays, ax_ssp, ax_g]
-
-
-def plot_pq(beam: PyBeam) -> Figure:
-    fig, ax = plt.subplots(2, 2)
-    iters = list(range(len(beam.p_re)))
-    ax[0, 0].plot(iters, beam.p_re)
-    ax[0, 0].set_ylabel("Re($p$)")
-    ax[0, 0].set_xlabel("Iterations")
-    ax[0, 0].set_ylim([-1, 1e5])
-
-    ax[1, 0].plot(iters, beam.p_im)
-    ax[1, 0].set_ylabel("Im($p$)")
-    ax[1, 0].set_xlabel("Iterations")
-    ax[1, 0].set_ylim([-1, 1e5])
-
-    ax[0, 1].plot(iters, beam.q_re)
-    ax[0, 1].set_ylabel("Re($q$)")
-    ax[0, 1].set_xlabel("Iterations")
-    ax[0, 1].set_ylim([-1, 1e5])
-
-    ax[1, 1].plot(iters, beam.q_im)
-    ax[1, 1].set_ylabel("Im($q$)")
-    ax[1, 1].set_xlabel("Iterations")
-    ax[1, 1].set_ylim([-1, 1e5])
-
-    return fig
-
-
-def plot_rays(cfg_file: Config, rays: list) -> Figure:
-    fig, ax_rays, _, _ = plot_environment(cfg_file)
-
-    for ray in rays:
-        ax_rays.plot(
-            np.array(ray.range_vals) / 1000, ray.depth_vals, c="k", linewidth=0.5
-        )
-
-    return fig
-
-
-def time_interp_rays(rays: list, time_vals: np.ndarray) -> List[Ray]:
-    for i in range(len(rays)):
-        rays[i].range_vals = np.interp(
-            time_vals, rays[i].time_vals, rays[i].range_vals, right=np.nan
-        )
-        rays[i].depth_vals = np.interp(
-            time_vals, rays[i].time_vals, rays[i].depth_vals, right=np.nan
-        )
-        rays[i].time_vals = time_vals
-    return rays
-
-
-def animate_propagation(cfg_file: Config, rays: List[Ray], framerate: float):
-    fig, ax_rays, _, _ = plot_environment(cfg_file)
-    max_time = np.nanmax([np.nanmax(ray.time_vals) for ray in rays])
-    time_vals = np.arange(0.0, max_time, 1 / framerate)
-    rays = time_interp_rays(rays, time_vals)
-    n_rays = len(rays)
-    lines = [] * n_rays
-    for i in range(n_rays):
-        (lines[i],) = ax_rays.plot([], [], c="k", linewidth=0.5)
-        rays[i].range_vals = np.array(rays[i].range_vals) / 1000
-
-    def update_frame(i: int) -> Iterable[Artist]:
-        for j in range(n_rays):
-            lines[j].set_xdata(rays[j].range_vals[:i])
-            lines[j].set_ydata(rays[j].depth_vals[:i])
-        return lines
-
-    _ = FuncAnimation(
-        fig, update_frame, frames=len(time_vals), interval=1000 / framerate
-    )
-    plt.show()
-
 
 if __name__ == "__main__":
     sources = [
@@ -217,12 +80,13 @@ if __name__ == "__main__":
         pq_solver="Radau3IIA",
     )
 
-    config = Config(prog_config=prog_config, env_config=env_config, sources=sources)
+    config = Config(prog_config=prog_config,
+                    env_config=env_config, sources=sources)
     rays = trace_rays(config)
     # beams = trace_beams(config)
     # rays = [bm.central_ray for bm in beams]
     rays = fix_rays(rays)
     ray_fig = plot_rays(config, rays)
     # pq_fig = plot_pq(beams[0])
-    # animate_propagation(config, rays, 10)
+    ani = animate_propagation(config, rays, 10, fast_fwd=100)
     plt.show()
