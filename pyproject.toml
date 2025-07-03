@@ -20,6 +20,7 @@ dependencies = [
   "pnglatex",
   "pyyaml",
   "ipykernel",
+  "maturin",
 ]
 dynamic = ["version"]
 [tool.maturin]
