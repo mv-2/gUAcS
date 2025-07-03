@@ -51,6 +51,7 @@ class Ray:
     ray_param: float
     ray_iter: int
     ray_id: str
+    frequency: float
 
 class PyBeam:
     central_ray: Ray

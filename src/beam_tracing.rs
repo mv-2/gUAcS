@@ -1,9 +1,10 @@
-use crate::interface::{Config, EnvConfig, ProgConfig};
+use crate::interface::{Config, EnvConfig, IsoSpace, ProgConfig};
 use crate::math_util::Mat2;
 use crate::path_tracing::{DirChange, Ray, RayInit, Ssp};
 use num::complex::Complex64;
 use pyo3::prelude::*;
 use rayon::prelude::*;
+use std::f64::consts::PI;
 
 /// Stores Beam propagation
 #[derive(Clone)]
@@ -11,6 +12,7 @@ pub struct Beam {
     pub central_ray: Ray,
     pub p_vals: Vec<Complex64>,
     pub q_vals: Vec<Complex64>,
+    pub ang_step: f64,
 }
 
 /// Interface to python as Complex64 has no pyo3 type for conversion
@@ -27,6 +29,12 @@ pub struct PyBeam {
     pub p_im: Vec<f64>,
     #[pyo3(get, set)]
     pub q_im: Vec<f64>,
+}
+
+/// Stores locations to calculate pressure and calculated values corresponding to locations
+pub struct PressureField {
+    pub locations: Vec<(f64, f64)>,
+    pub pressures: Vec<Complex64>,
 }
 
 impl PyBeam {
@@ -54,6 +62,7 @@ enum SolverMethod {
     BackEuler,
     Radau3IIA,
 }
+
 impl SolverMethod {
     pub fn from_string(str: &str) -> Option<SolverMethod> {
         match str {
@@ -73,6 +82,7 @@ impl Beam {
             central_ray: Ray::init_from_cfgs(init_source, prog_config),
             p_vals: vec![Complex64::ZERO; prog_config.max_it + 1],
             q_vals: vec![Complex64::ZERO; prog_config.max_it + 1],
+            ang_step: init_source.ang_step,
         };
         bm.q_vals[0] = Complex64::new(0.0, 1.0 / init_source.init_sound_speed);
         bm.p_vals[0] = Complex64::new(1.0, 0.0);
@@ -107,6 +117,19 @@ impl Beam {
         c_i2 = ssp.interp_sound_speed(
             beam.central_ray.depth_vals[0] + 2.0 * depth_dir * prog_config.depth_step,
         );
+
+        for i in 0..env_config.isospaces.len() {
+            if env_config.isospaces[i].body.contains_point(
+                &beam.central_ray.range_vals[0],
+                &beam.central_ray.depth_vals[0],
+            ) {
+                beam.central_ray
+                    .iso_trace(&env_config.isospaces[i], prog_config.max_it, &ang);
+                beam.update_pq_iso(&env_config.isospaces[i], 0);
+                beam.central_ray.truncate_ray();
+                return beam;
+            }
+        }
 
         // while loop to iterate updates of ray
         while (beam.central_ray.ray_iter < prog_config.max_it - init_source.init_iter)
@@ -177,6 +200,22 @@ impl Beam {
         // truncate vectors to remove any wasted space
         beam.truncate_beam();
         beam
+    }
+
+    /// Update p-q ODE values in [`IsoSpace`] propagation
+    fn update_pq_iso(&mut self, isospace: &IsoSpace, start_id: usize) {
+        // TODO: Update theory to match this
+        for i in start_id..self.central_ray.ray_iter {
+            let dist_step: f64 = ((self.central_ray.range_vals[i + 1]
+                - self.central_ray.range_vals[i])
+                .powi(2)
+                + (self.central_ray.depth_vals[i + 1] - self.central_ray.depth_vals[i]).powi(2))
+            .sqrt();
+            self.p_vals[i + 1] = self.p_vals[i];
+            self.q_vals[i + 1] = isospace.sound_speed * dist_step
+                + Complex64::I * isospace.sound_speed.powi(2)
+                    / (self.central_ray.frequency * PI * self.ang_step.powi(2));
+        }
     }
 
     /// Update p-q ODE values
@@ -361,6 +400,12 @@ impl Beam {
         self.central_ray.truncate_ray();
         self.q_vals.truncate(self.central_ray.ray_iter + 1);
         self.p_vals.truncate(self.central_ray.ray_iter + 1);
+    }
+}
+
+impl PressureField {
+    pub fn evaluate_field() {
+        todo!();
     }
 }
 

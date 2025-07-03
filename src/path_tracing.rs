@@ -40,6 +40,8 @@ pub struct Ray {
     pub ray_iter: usize,
     #[pyo3(get, set)]
     pub ray_id: String,
+    #[pyo3(get, set)]
+    pub frequency: f64,
 }
 
 /// Stores data required to initialise rays
@@ -52,6 +54,7 @@ pub struct RayInit {
     pub init_sound_speed: f64,
     pub range_lims: RangeInclusive<f64>,
     pub frequency: f64,
+    pub ang_step: f64,
 }
 
 impl RayInit {
@@ -71,6 +74,11 @@ impl RayInit {
             false => source.ray_fan_limits[0],
         };
 
+        let ang_step: f64 = match source.n_rays == 1 {
+            true => 2.0 * f64::consts::PI,
+            false => (source.ray_fan_limits[1] - source.ray_fan_limits[0]) / source.n_rays as f64,
+        };
+
         RayInit {
             range_pos: source.range_pos,
             depth_pos: source.depth_pos,
@@ -81,6 +89,7 @@ impl RayInit {
             range_lims: RangeInclusive::new(prog_config.min_range, prog_config.max_range), // TODO:
             // Initialise this elsewhere
             frequency: source.frequency,
+            ang_step,
         }
     }
 }
@@ -167,6 +176,7 @@ impl Ray {
             ray_param: init_source.init_ang.cos() / init_source.init_sound_speed,
             ray_iter: 0,
             ray_id: Uuid::new_v4().to_string(),
+            frequency: init_source.frequency,
         };
 
         // initialise position and time
@@ -305,7 +315,7 @@ impl Ray {
     }
 
     /// Trace straight ray through constant SSP areas of [`IsoSpace`]
-    fn iso_trace(&mut self, iso_space: &IsoSpace, max_it: usize, ang: &f64) {
+    pub fn iso_trace(&mut self, iso_space: &IsoSpace, max_it: usize, ang: &f64) {
         // this is dumb
         let mut ang: f64 = *ang;
         let mut test_range_vals: [f64; 2];
@@ -543,7 +553,7 @@ impl Body {
     }
 
     /// Calculates if point at range [m] and depth [m] is inside of polygon shape
-    fn contains_point(&self, range: &f64, depth: &f64) -> bool {
+    pub fn contains_point(&self, range: &f64, depth: &f64) -> bool {
         // cast vertical ray above surface
         let ray_range_vals: [f64; 2] = [*range, *range];
         let ray_depth_vals: [f64; 2] = [*depth, -1.0];
@@ -619,6 +629,7 @@ mod test {
             ray_id: Uuid::new_v4().to_string(),
             ray_param: 1.0,
             time_vals: vec![0.0, 1.0],
+            frequency: 0.0,
         };
         let ans: IntersectLoc = test_body
             .check_finite_intersection(
@@ -644,6 +655,7 @@ mod test {
             ray_id: Uuid::new_v4().to_string(),
             ray_param: 1.0,
             time_vals: vec![0.0, 1.0],
+            frequency: 0.0,
         };
         let ans: Option<IntersectLoc> = test_body.check_finite_intersection(
             &test_ray.range_vals,
@@ -665,6 +677,7 @@ mod test {
             ray_id: Uuid::new_v4().to_string(),
             ray_param: 1.0,
             time_vals: vec![0.0, 1.0],
+            frequency: 0.0,
         };
         let ans: Option<IntersectLoc> = test_body.check_finite_intersection(
             &test_ray.range_vals,
@@ -686,6 +699,7 @@ mod test {
             ray_id: Uuid::new_v4().to_string(),
             ray_param: 1.0,
             time_vals: vec![0.0, 1.0],
+            frequency: 0.0,
         };
         let ans: Option<IntersectLoc> = test_body.check_finite_intersection(
             &test_ray.range_vals,
@@ -710,6 +724,7 @@ mod test {
             ray_id: Uuid::new_v4().to_string(),
             ray_param: 1.0,
             time_vals: vec![0.0, 1.0],
+            frequency: 0.0,
         };
         // TODO: VERIFY THIS
         let ray_ang: f64 = (test_ray.range_vals[1] - test_ray.range_vals[0])

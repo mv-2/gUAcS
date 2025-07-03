@@ -1,4 +1,7 @@
-use crate::path_tracing::{Body, Ssp};
+use crate::{
+    beam_tracing::PressureField,
+    path_tracing::{Body, Ssp},
+};
 use pyo3::prelude::*;
 use serde::Deserialize;
 

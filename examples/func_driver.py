@@ -1,6 +1,6 @@
 from guacs.guacs import (
     trace_rays,
-    # trace_beams,
+    trace_beams,
     Config,
     ProgConfig,
     EnvConfig,
@@ -13,7 +13,7 @@ from scipy.interpolate import splrep
 import matplotlib.pyplot as plt
 from typing import Tuple
 import matplotlib
-from python_utils import munk_profile, fix_rays, plot_rays, animate_propagation
+from python_utils import munk_profile, fix_rays, plot_rays, animate_propagation, plot_pq
 
 matplotlib.use("QtAgg")
 
@@ -23,7 +23,7 @@ if __name__ == "__main__":
             range_pos=0.0,
             depth_pos=1000.0,
             ray_fan_limits=(-0.1, 0.2),
-            n_rays=1,
+            n_rays=2,
             source_level=150,
             frequency=1000,
         )
@@ -80,13 +80,12 @@ if __name__ == "__main__":
         pq_solver="Radau3IIA",
     )
 
-    config = Config(prog_config=prog_config,
-                    env_config=env_config, sources=sources)
-    rays = trace_rays(config)
-    # beams = trace_beams(config)
-    # rays = [bm.central_ray for bm in beams]
+    config = Config(prog_config=prog_config, env_config=env_config, sources=sources)
+    # rays = trace_rays(config)
+    beams = trace_beams(config)
+    rays = [bm.central_ray for bm in beams]
     rays = fix_rays(rays)
     ray_fig = plot_rays(config, rays)
-    # pq_fig = plot_pq(beams[0])
-    ani = animate_propagation(config, rays, 10, fast_fwd=100)
+    pq_fig = plot_pq(beams)
+    # ani = animate_propagation(config, rays, 10, fast_fwd=100)
     plt.show()
