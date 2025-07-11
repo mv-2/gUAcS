@@ -114,7 +114,7 @@ struct IntersectLoc {
     edge_id: usize,
 }
 
-/// Stores result of reflection calculation in [`calculate_reflection()`]
+/// Stores result of reflection calculation in [`Body::calculate_reflection()`]
 #[derive(Debug)]
 pub struct ReflectResult {
     pub range: f64,
@@ -477,7 +477,7 @@ impl Body {
         }
     }
 
-    fn calculate_reflection(
+    pub fn calculate_reflection(
         &self,
         range_vals: &[f64],
         depth_vals: &[f64],
@@ -552,7 +552,7 @@ impl Body {
         None
     }
 
-    /// Calculates if point at range [m] and depth [m] is inside of polygon shape
+    /// Calculates if point at range and depth (in metres) is inside of polygon shape
     pub fn contains_point(&self, range: &f64, depth: &f64) -> bool {
         // cast vertical ray above surface
         let ray_range_vals: [f64; 2] = [*range, *range];
@@ -586,7 +586,7 @@ fn intersection_ray_dist_param(
     }
 }
 
-/// Driver function to trace all rays from [`Config`] struct
+/// Driver function to trace all rays from [`RayConfig`] struct
 pub fn trace_rays(cfg: RayConfig) -> Vec<Ray> {
     let mut init_sources: Vec<RayInit> = vec![];
     let mut init_sound_speed: f64;
