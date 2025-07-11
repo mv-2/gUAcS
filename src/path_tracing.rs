@@ -1,4 +1,4 @@
-use crate::interface::{Config, EnvConfig, IsoSpace, ProgConfig, SourceConfig};
+use crate::interface::{EnvConfig, IsoSpace, ProgConfig, RayConfig, SourceConfig};
 use crate::math_util::deboor_alg;
 use core::f64;
 use csv::Writer;
@@ -587,7 +587,7 @@ fn intersection_ray_dist_param(
 }
 
 /// Driver function to trace all rays from [`Config`] struct
-pub fn trace_rays(cfg: Config) -> Vec<Ray> {
+pub fn trace_rays(cfg: RayConfig) -> Vec<Ray> {
     let mut init_sources: Vec<RayInit> = vec![];
     let mut init_sound_speed: f64;
     for source in cfg.sources {

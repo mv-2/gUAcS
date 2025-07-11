@@ -1,14 +1,12 @@
-use crate::{
-    beam_tracing::PressureField,
-    path_tracing::{Body, Ssp},
-};
+use crate::path_tracing::{Body, Ssp};
+
 use pyo3::prelude::*;
 use serde::Deserialize;
 
 /// Overall config opject to aid in loading serialized config jsons
 #[derive(Deserialize, Debug, Clone)]
 #[pyclass]
-pub struct Config {
+pub struct RayConfig {
     #[pyo3(get, set)]
     pub prog_config: ProgConfig,
     #[pyo3(get, set)]
@@ -17,7 +15,36 @@ pub struct Config {
     pub sources: Vec<SourceConfig>,
 }
 
-/// Config to store programmatic data not relevant to theory of simulation
+/// Beam Config struct for python
+#[derive(Clone)]
+#[pyclass]
+pub struct BeamConfig {
+    #[pyo3(get, set)]
+    ray_config: RayConfig,
+    #[pyo3(get, set)]
+    pq_solver: String,
+    #[pyo3(get, set)]
+    pressure_locs: Vec<[f64; 2]>,
+}
+
+/// Beam Config struct for rust
+pub struct BeamConfigRust {
+    pub ray_config: RayConfig,
+    pub pq_solver: SolverMethod,
+    pub pressure_locs: Vec<[f64; 2]>,
+}
+
+impl From<BeamConfig> for BeamConfigRust {
+    fn from(beam_config: BeamConfig) -> Self {
+        BeamConfigRust {
+            ray_config: beam_config.ray_config,
+            pq_solver: SolverMethod::from(beam_config.pq_solver),
+            pressure_locs: beam_config.pressure_locs,
+        }
+    }
+}
+
+/// RayConfig to store programmatic data not relevant to theory of simulation
 #[derive(Deserialize, Debug, Clone)]
 #[pyclass]
 pub struct ProgConfig {
@@ -31,8 +58,6 @@ pub struct ProgConfig {
     pub min_range: f64,
     #[pyo3(get, set)]
     pub output_path: String,
-    #[pyo3(get, set)]
-    pub pq_solver: String,
 }
 
 /// Stores environmental constant data for simulation (SSP and density profile information)
@@ -160,7 +185,6 @@ impl ProgConfig {
         max_range: f64,
         min_range: f64,
         output_path: String,
-        pq_solver: String,
     ) -> Self {
         ProgConfig {
             depth_step,
@@ -168,19 +192,51 @@ impl ProgConfig {
             max_range,
             min_range,
             output_path,
-            pq_solver,
         }
     }
 }
 
 #[pymethods]
-impl Config {
+impl RayConfig {
     #[new]
     fn py_new(env_config: EnvConfig, prog_config: ProgConfig, sources: Vec<SourceConfig>) -> Self {
-        Config {
+        RayConfig {
             env_config,
             prog_config,
             sources,
+        }
+    }
+}
+
+#[pymethods]
+impl BeamConfig {
+    #[new]
+    fn py_new(ray_config: RayConfig, pq_solver: String, pressure_locs: Vec<[f64; 2]>) -> Self {
+        BeamConfig {
+            ray_config,
+            pq_solver,
+            pressure_locs,
+        }
+    }
+}
+
+// Enum to set solver method for p-q equations
+#[derive(Clone, Copy)]
+pub enum SolverMethod {
+    RungeKutta4,
+    Radau3IA,
+    BackEuler,
+    Radau3IIA,
+}
+
+impl From<String> for SolverMethod {
+    fn from(s: String) -> Self {
+        match s.as_str() {
+            "BackwardEuler" => SolverMethod::BackEuler,
+            "RungeKutta4" => SolverMethod::RungeKutta4,
+            "Radau3IA" => SolverMethod::Radau3IA,
+            "Radau3IIA" => SolverMethod::Radau3IIA,
+            _ => panic!("Invalid p-q solver method: {s}"),
         }
     }
 }

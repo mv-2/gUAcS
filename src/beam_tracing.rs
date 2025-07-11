@@ -1,4 +1,4 @@
-use crate::interface::{Config, EnvConfig, IsoSpace, ProgConfig};
+use crate::interface::{BeamConfigRust, EnvConfig, IsoSpace, ProgConfig, SolverMethod};
 use crate::math_util::Mat2;
 use crate::path_tracing::{DirChange, Ray, RayInit, Ssp};
 use num::complex::Complex64;
@@ -55,26 +55,6 @@ impl PyBeam {
     }
 }
 
-// Enum to set solver method for p-q equations
-enum SolverMethod {
-    RungeKutta4,
-    Radau3IA,
-    BackEuler,
-    Radau3IIA,
-}
-
-impl SolverMethod {
-    pub fn from_string(str: &str) -> Option<SolverMethod> {
-        match str {
-            "BackwardEuler" => Some(SolverMethod::BackEuler),
-            "RungeKutta4" => Some(SolverMethod::RungeKutta4),
-            "Radau3IA" => Some(SolverMethod::Radau3IA),
-            "Radau3IIA" => Some(SolverMethod::Radau3IIA),
-            _ => None,
-        }
-    }
-}
-
 impl Beam {
     /// Initialise [`Beam`] struct from configs
     fn init_from_configs(init_source: &RayInit, prog_config: &ProgConfig) -> Beam {
@@ -95,10 +75,9 @@ impl Beam {
         prog_config: &ProgConfig,
         env_config: &EnvConfig,
         ssp: &Ssp,
+        pq_solver: &SolverMethod,
     ) -> Beam {
         let mut beam: Beam = Beam::init_from_configs(init_source, prog_config);
-        let method: SolverMethod = SolverMethod::from_string(&prog_config.pq_solver[..])
-            .expect("Requested p-q solver method is not defined");
         let mut c_i: f64;
         let mut c_i1: f64;
         let mut c_i2: f64;
@@ -151,7 +130,7 @@ impl Beam {
                 &c_i2,
                 &arc_step,
                 &prog_config.depth_step,
-                &method,
+                pq_solver,
             );
             // iterate depth step. Match statement to update ssp variables as required
             match beam.central_ray.update_iteration(
@@ -404,20 +383,26 @@ impl Beam {
 }
 
 impl PressureField {
-    pub fn evaluate_field() {
+    pub fn evaluate_field(beam_config: BeamConfigRust, beams: Vec<Beam>) {
         todo!();
     }
 }
 
 /// Driving beam tracing function
-pub fn trace_beams(cfg: Config) -> Vec<Beam> {
+pub fn trace_beams(cfg: BeamConfigRust) -> Vec<Beam> {
     let mut init_sources: Vec<RayInit> = vec![];
     let mut init_sound_speed: f64;
-    for source in cfg.sources {
-        init_sound_speed = cfg.env_config.ssp.interp_sound_speed(source.depth_pos);
+    for source in cfg.ray_config.sources {
+        init_sound_speed = cfg
+            .ray_config
+            .env_config
+            .ssp
+            .interp_sound_speed(source.depth_pos);
         init_sources.append(
             &mut (0..source.n_rays)
-                .map(|i| RayInit::from_source(&source, i, init_sound_speed, &cfg.prog_config))
+                .map(|i| {
+                    RayInit::from_source(&source, i, init_sound_speed, &cfg.ray_config.prog_config)
+                })
                 .collect(),
         );
     }
@@ -426,9 +411,10 @@ pub fn trace_beams(cfg: Config) -> Vec<Beam> {
         .map(|init_source| {
             Beam::trace_from_init_source(
                 init_source,
-                &cfg.prog_config,
-                &cfg.env_config,
-                &cfg.env_config.ssp,
+                &cfg.ray_config.prog_config,
+                &cfg.ray_config.env_config,
+                &cfg.ray_config.env_config.ssp,
+                &cfg.pq_solver,
             )
         })
         .collect()

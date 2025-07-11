@@ -12,7 +12,7 @@ use crate::path_tracing::{trace_rays, Body, Ray, Ssp};
 
 #[pyfunction]
 #[pyo3(name = "trace_rays")]
-fn python_rays(config: Config) -> PyResult<Vec<Ray>> {
+fn python_rays(config: RayConfig) -> PyResult<Vec<Ray>> {
     // silly wrapper for python stuff
     Ok(trace_rays(config))
 }
@@ -20,9 +20,9 @@ fn python_rays(config: Config) -> PyResult<Vec<Ray>> {
 #[pyfunction]
 #[pyo3(name = "trace_beams")]
 #[allow(clippy::redundant_closure)]
-fn python_beams(config: Config) -> PyResult<Vec<PyBeam>> {
-    // silly wrapper for python stuff
-    Ok(trace_beams(config)
+fn python_beams(config: BeamConfig) -> PyResult<Vec<PyBeam>> {
+    let rust_config: BeamConfigRust = BeamConfigRust::from(config);
+    Ok(trace_beams(rust_config)
         .par_iter()
         .map(|bm| PyBeam::from_beam(bm))
         .collect())
@@ -32,7 +32,8 @@ fn python_beams(config: Config) -> PyResult<Vec<PyBeam>> {
 fn guacs(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(python_rays, m)?)?;
     m.add_function(wrap_pyfunction!(python_beams, m)?)?;
-    m.add_class::<Config>()?;
+    m.add_class::<RayConfig>()?;
+    m.add_class::<BeamConfig>()?;
     m.add_class::<ProgConfig>()?;
     m.add_class::<EnvConfig>()?;
     m.add_class::<SourceConfig>()?;

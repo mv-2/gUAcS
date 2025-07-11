@@ -1,7 +1,8 @@
 from guacs.guacs import (
     trace_rays,
     trace_beams,
-    Config,
+    RayConfig,
+    BeamConfig,
     ProgConfig,
     EnvConfig,
     SourceConfig,
@@ -77,15 +78,19 @@ if __name__ == "__main__":
         max_range=2e5,
         min_range=-10.0,
         output_path="output_data",
-        pq_solver="Radau3IIA",
     )
 
-    config = Config(prog_config=prog_config, env_config=env_config, sources=sources)
+    ray_config = RayConfig(
+        prog_config=prog_config, env_config=env_config, sources=sources
+    )
+    beam_config = BeamConfig(
+        ray_config=ray_config, pq_solver="Radau3IIA", pressure_locs=[]
+    )
     # rays = trace_rays(config)
-    beams = trace_beams(config)
+    beams = trace_beams(beam_config)
     rays = [bm.central_ray for bm in beams]
     rays = fix_rays(rays)
-    ray_fig = plot_rays(config, rays)
+    ray_fig = plot_rays(ray_config, rays)
     pq_fig = plot_pq(beams)
     # ani = animate_propagation(config, rays, 10, fast_fwd=100)
     plt.show()

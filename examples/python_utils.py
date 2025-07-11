@@ -1,5 +1,5 @@
 from guacs.guacs import (
-    Config,
+    RayConfig,
     Ray,
     PyBeam,
 )
@@ -32,7 +32,7 @@ def fix_rays(raw_rays: list) -> List[Ray]:
     return raw_rays
 
 
-def plot_environment(cfg_file: Config) -> List:
+def plot_environment(cfg_file: RayConfig) -> List:
     fig, ax = plt.subplots(1, 2, sharey=True, gridspec_kw={
                            "width_ratios": [1, 4]})
     bodies = cfg_file.env_config.bodies
@@ -101,8 +101,8 @@ def plot_pq(beams: List[PyBeam]) -> Figure:
     return fig
 
 
-def plot_rays(cfg_file: Config, rays: list) -> Figure:
-    fig, ax_rays, _, _ = plot_environment(cfg_file)
+def plot_rays(cfg: RayConfig, rays: list) -> Figure:
+    fig, ax_rays, _, _ = plot_environment(cfg)
 
     for ray in rays:
         ax_rays.plot(
@@ -125,9 +125,9 @@ def time_interp_rays(rays: list, time_vals: np.ndarray) -> List[Ray]:
 
 
 def animate_propagation(
-    cfg_file: Config, rays: List[Ray], framerate: float, fast_fwd: float = 1
+    cfg: RayConfig, rays: List[Ray], framerate: float, fast_fwd: float = 1
 ):
-    fig, ax_rays, _, _ = plot_environment(cfg_file)
+    fig, ax_rays, _, _ = plot_environment(cfg)
     max_time = np.nanmax([np.nanmax(ray.time_vals) for ray in rays])
     time_vals = np.arange(0.0, max_time, 1 / framerate)
     rays = time_interp_rays(rays, time_vals)
