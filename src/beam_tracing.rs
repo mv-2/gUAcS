@@ -1,7 +1,7 @@
 use crate::interface::{BeamConfigRust, EnvConfig, IsoSpace, ProgConfig, SolverMethod};
 use crate::math_util::Mat2;
 use crate::path_tracing::{DirChange, Ray, RayInit, Ssp};
-use num::complex::Complex64;
+use num::Complex;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 use std::f64::consts::PI;
@@ -10,12 +10,12 @@ use std::f64::consts::PI;
 #[derive(Clone)]
 pub struct Beam {
     pub central_ray: Ray,
-    pub p_vals: Vec<Complex64>,
-    pub q_vals: Vec<Complex64>,
+    pub p_vals: Vec<Complex<f64>>,
+    pub q_vals: Vec<Complex<f64>>,
     pub ang_step: f64,
 }
 
-/// Interface to python as Complex64 has no pyo3 type for conversion
+/// Interface to python as Complex<f64> has no pyo3 type for conversion
 #[pyclass]
 #[derive(Debug)]
 pub struct PyBeam {
@@ -34,7 +34,7 @@ pub struct PyBeam {
 /// Stores locations to calculate pressure and calculated values corresponding to locations
 pub struct PressureField {
     pub locations: Vec<(f64, f64)>,
-    pub pressures: Vec<Complex64>,
+    pub pressures: Vec<Complex<f64>>,
 }
 
 impl PyBeam {
@@ -60,12 +60,12 @@ impl Beam {
     fn init_from_configs(init_source: &RayInit, prog_config: &ProgConfig) -> Beam {
         let mut bm: Beam = Beam {
             central_ray: Ray::init_from_cfgs(init_source, prog_config),
-            p_vals: vec![Complex64::ZERO; prog_config.max_it + 1],
-            q_vals: vec![Complex64::ZERO; prog_config.max_it + 1],
+            p_vals: vec![Complex::ZERO; prog_config.max_it + 1],
+            q_vals: vec![Complex::ZERO; prog_config.max_it + 1],
             ang_step: init_source.ang_step,
         };
-        bm.q_vals[0] = Complex64::new(0.0, 1.0 / init_source.init_sound_speed);
-        bm.p_vals[0] = Complex64::new(1.0, 0.0);
+        bm.q_vals[0] = Complex::new(0.0, 1.0 / init_source.init_sound_speed);
+        bm.p_vals[0] = Complex::new(1.0, 0.0);
         bm
     }
 
@@ -192,7 +192,7 @@ impl Beam {
             .sqrt();
             self.p_vals[i + 1] = self.p_vals[i];
             self.q_vals[i + 1] = isospace.sound_speed * dist_step
-                + Complex64::I * isospace.sound_speed.powi(2)
+                + Complex::I * isospace.sound_speed.powi(2)
                     / (self.central_ray.frequency * PI * self.ang_step.powi(2));
         }
     }
@@ -246,19 +246,19 @@ impl Beam {
         let c_nn_j1: f64 =
             -self.central_ray.ray_param * c_i1 * (c_i2 - 2.0 * c_i1 + c_i) / depth_step.powi(2);
         // calculate k values
-        let k_n1: [Complex64; 2] = [
+        let k_n1: [Complex<f64>; 2] = [
             c_i * self.p_vals[self.central_ray.ray_iter],
             -c_nn_j * self.q_vals[self.central_ray.ray_iter] / c_i.powi(2),
         ];
-        let k_n2: [Complex64; 2] = [
+        let k_n2: [Complex<f64>; 2] = [
             c_i1_2 * (self.p_vals[self.central_ray.ray_iter] + 0.5 * k_n1[0]),
             -c_nn_j1_2 * (self.q_vals[self.central_ray.ray_iter] + 0.5 * k_n1[1]) / c_i1_2.powi(2),
         ];
-        let k_n3: [Complex64; 2] = [
+        let k_n3: [Complex<f64>; 2] = [
             c_i1_2 * (self.p_vals[self.central_ray.ray_iter] + 0.5 * k_n2[0]),
             -c_nn_j1_2 * (self.q_vals[self.central_ray.ray_iter] + 0.5 * k_n2[1]) / c_i1_2.powi(2),
         ];
-        let k_n4: [Complex64; 2] = [
+        let k_n4: [Complex<f64>; 2] = [
             c_i1 * (self.p_vals[self.central_ray.ray_iter] + k_n3[0]),
             -c_nn_j1 * (self.q_vals[self.central_ray.ray_iter] + k_n3[1]) / c_i1.powi(2),
         ];
@@ -333,18 +333,18 @@ impl Beam {
         let dmat_i_21: f64 = -3_f64 * c_nn_i2_3 / (c_i2_3 * denom_i);
         let dmat_i_22: f64 = -1_f64 - 15_f64 * c_nn_i2_3 / denom_i;
         let coeff: f64 = 4_f64 / (arc_step * (cmat_i_11 * cmat_i_22 - cmat_i_12 * cmat_i_21));
-        let q_j: Complex64 = self.q_vals[self.central_ray.ray_iter];
-        let p_j: Complex64 = self.p_vals[self.central_ray.ray_iter];
-        let kn1_1: Complex64 = coeff
+        let q_j: Complex<f64> = self.q_vals[self.central_ray.ray_iter];
+        let p_j: Complex<f64> = self.p_vals[self.central_ray.ray_iter];
+        let kn1_1: Complex<f64> = coeff
             * (q_j * (cmat_i_22 * dmat_i_11 - cmat_i_12 * dmat_i_21)
                 + p_j * (cmat_i_22 * dmat_i_12 - cmat_i_12 * dmat_i_22));
-        let kn1_2: Complex64 = coeff
+        let kn1_2: Complex<f64> = coeff
             * (q_j * (-cmat_i_21 * dmat_i_11 + cmat_i_11 * dmat_i_21)
                 + p_j * (-cmat_i_21 * dmat_i_12 + cmat_i_11 * dmat_i_22));
-        let kn2_1: Complex64 = (-5_f64 * c_nn_i2_3 * (12_f64 * q_j / arc_step + 3_f64 * kn1_1)
+        let kn2_1: Complex<f64> = (-5_f64 * c_nn_i2_3 * (12_f64 * q_j / arc_step + 3_f64 * kn1_1)
             + c_i2_3.powi(2) * (12_f64 * p_j / arc_step + 3_f64 * kn1_2))
             / denom_i;
-        let kn2_2: Complex64 = (-c_nn_i2_3 * (12_f64 * q_j / arc_step + 3_f64 * kn1_1) / c_i2_3
+        let kn2_2: Complex<f64> = (-c_nn_i2_3 * (12_f64 * q_j / arc_step + 3_f64 * kn1_1) / c_i2_3
             - 5_f64 * c_i2_3.powi(2) * (12_f64 * p_j / arc_step + 3_f64 * kn1_2))
             / denom_i;
         self.q_vals[self.central_ray.ray_iter + 1] =
@@ -380,11 +380,31 @@ impl Beam {
         self.q_vals.truncate(self.central_ray.ray_iter + 1);
         self.p_vals.truncate(self.central_ray.ray_iter + 1);
     }
+
+    pub fn calculate_pressures(
+        &self,
+        range: &f64,
+        depth: &f64,
+        window_width: Option<f64>,
+    ) -> Vec<Complex<f64>> {
+        todo!();
+    }
 }
 
-impl PressureField {
-    pub fn evaluate_field(beam_config: BeamConfigRust, beams: Vec<Beam>) {
-        todo!();
+pub fn evaluate_field(beam_config: BeamConfigRust, beams: Vec<Beam>) -> PressureField {
+    for range_depth in beam_config.pressure_locs {
+        beams
+            .iter()
+            .map(|bm| {
+                bm.calculate_pressures(&range_depth[0], &range_depth[1], beam_config.window_width)
+                    .iter()
+                    .sum::<Complex<f64>>()
+            })
+            .sum::<Complex<f64>>();
+    }
+    PressureField {
+        locations: vec![],
+        pressures: vec![],
     }
 }
 

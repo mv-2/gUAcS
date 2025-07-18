@@ -1,12 +1,18 @@
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
-def trace_rays(config: Config) -> List[Ray]: ...
-def trace_beams(config: Config) -> List[PyBeam]: ...
+def trace_rays(config: RayConfig) -> List[Ray]: ...
+def trace_beams(config: BeamConfig) -> List[PyBeam]: ...
 
-class Config:
+class RayConfig:
     prog_config: ProgConfig
     env_config: EnvConfig
     sources: List[SourceConfig]
+
+class BeamConfig:
+    ray_config: RayConfig
+    pq_solver: str
+    pressure_locs: List[List[float]]
+    window_width: Union[float, None]
 
 class ProgConfig:
     max_it: int
@@ -14,7 +20,6 @@ class ProgConfig:
     max_range: float
     min_range: float
     output_path: str
-    pq_solver: str
 
 class EnvConfig:
     ssp: Ssp

@@ -25,6 +25,8 @@ pub struct BeamConfig {
     pq_solver: String,
     #[pyo3(get, set)]
     pressure_locs: Vec<[f64; 2]>,
+    #[pyo3(get, set)]
+    window_width: Option<f64>,
 }
 
 /// Beam Config struct for rust
@@ -32,6 +34,7 @@ pub struct BeamConfigRust {
     pub ray_config: RayConfig,
     pub pq_solver: SolverMethod,
     pub pressure_locs: Vec<[f64; 2]>,
+    pub window_width: Option<f64>,
 }
 
 impl From<BeamConfig> for BeamConfigRust {
@@ -40,6 +43,7 @@ impl From<BeamConfig> for BeamConfigRust {
             ray_config: beam_config.ray_config,
             pq_solver: SolverMethod::from(beam_config.pq_solver),
             pressure_locs: beam_config.pressure_locs,
+            window_width: beam_config.window_width,
         }
     }
 }
@@ -211,11 +215,17 @@ impl RayConfig {
 #[pymethods]
 impl BeamConfig {
     #[new]
-    fn py_new(ray_config: RayConfig, pq_solver: String, pressure_locs: Vec<[f64; 2]>) -> Self {
+    fn py_new(
+        ray_config: RayConfig,
+        pq_solver: String,
+        pressure_locs: Vec<[f64; 2]>,
+        window_width: Option<f64>,
+    ) -> Self {
         BeamConfig {
             ray_config,
             pq_solver,
             pressure_locs,
+            window_width,
         }
     }
 }
