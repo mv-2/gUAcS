@@ -1,3 +1,7 @@
+---
+format: gfm
+---
+
 # gUAcS Examples
 The following notebook contains some basic usage of the ``gUAcS`` package. For more details on the theory in this simulation please view ``docs\theory.pdf``.
 
