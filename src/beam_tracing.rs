@@ -1,6 +1,7 @@
 use crate::interface::{BeamConfigRust, EnvConfig, IsoSpace, ProgConfig, SolverMethod};
 use crate::math_util::Mat2;
 use crate::path_tracing::{DirChange, Ray, RayInit, Ssp};
+use num::iter::RangeInclusive;
 use num::Complex;
 use pyo3::prelude::*;
 use rayon::prelude::*;
@@ -316,7 +317,7 @@ impl Beam {
         arc_step: &f64,
         depth_step: &f64,
     ) {
-        let c_i2_3 = (c_i1 + c_i1 + c_i) / 3.0;
+        let c_i2_3: f64 = (c_i1 + c_i1 + c_i) / 3.0;
         let c_nn_i: f64 =
             -self.central_ray.ray_param * c_i * (c_i1 - 2.0 * c_i + c_im1) / depth_step.powi(2);
         let c_nn_i1: f64 =
@@ -381,17 +382,73 @@ impl Beam {
         self.p_vals.truncate(self.central_ray.ray_iter + 1);
     }
 
+    fn calculate_valid_pq(
+        &self,
+        range_receiver: &f64,
+        depth_receiver: &f64,
+        window_width: Option<f64>,
+    ) -> Vec<[Complex<f64>; 2]> {
+        let mut pq_vals: Vec<[Complex<f64>; 2]> = vec![];
+        let mut range_step: f64;
+        let mut depth_step: f64;
+        let mut range_intersect: f64;
+        let mut p: Complex<f64>;
+        let mut q: Complex<f64>;
+
+        match window_width {
+            Some(width) => {
+                todo!();
+            }
+            None => {
+                for i in 0..self.central_ray.ray_iter {
+                    // TODO: move this function to math_util.rs as
+                    // interpolate_perpendicular_location
+                    range_step =
+                        self.central_ray.range_vals[i + 1] - self.central_ray.range_vals[i];
+                    depth_step =
+                        self.central_ray.depth_vals[i + 1] - self.central_ray.depth_vals[i];
+                    range_intersect = (range_step.powi(2) * range_receiver
+                        + depth_step.powi(2) * self.central_ray.range_vals[i]
+                        + range_step
+                            * depth_step
+                            * (depth_receiver - self.central_ray.depth_vals[i]))
+                        / (range_step.powi(2) + depth_step.powi(2));
+                    if ((range_intersect <= self.central_ray.range_vals[i + 1])
+                        && (range_intersect > self.central_ray.range_vals[i]))
+                        || ((range_intersect > self.central_ray.range_vals[i + 1])
+                            && (range_intersect <= self.central_ray.range_vals[i]))
+                    {
+                        // TODO: MAke this an interp function????
+                        // FIXME: this wont work for vertical rays right now
+                        let p: Complex<f64> = self.p_vals[i]
+                            + (range_intersect - self.central_ray.range_vals[i])
+                                * (self.p_vals[i + 1] - self.p_vals[i])
+                                / range_step;
+                        let q: Complex<f64> = self.q_vals[i]
+                            + (range_intersect - self.central_ray.range_vals[i])
+                                * (self.q_vals[i + 1] - self.q_vals[i])
+                                / range_step;
+                        pq_vals.push([p, q]);
+                    }
+                }
+            }
+        }
+        todo!();
+    }
+
     pub fn calculate_pressures(
         &self,
         range: &f64,
         depth: &f64,
         window_width: Option<f64>,
     ) -> Vec<Complex<f64>> {
+        let pq_vals: Vec<[Complex<f64>; 2]> = self.calculate_valid_pq(range, depth, window_width);
         todo!();
     }
 }
 
 pub fn evaluate_field(beam_config: BeamConfigRust, beams: Vec<Beam>) -> PressureField {
+    // TODO: Check efficiency gains with par_iter() calls in different nest levels
     for range_depth in beam_config.pressure_locs {
         beams
             .iter()
