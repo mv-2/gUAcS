@@ -6,16 +6,8 @@ This project was created in order to develop knowledge for both the theory/physi
 
 For a more detailed description of the underlying theory please see the ``docs\theory.tex`` file (this should eventually be compiled as a pdf file and included under the releases section of this page).
 
-## Build Process
-
-The included `makefile` allows the project to be built or have all toolchains required for development installed. To install the package and run the included driver script use the following:
-
-```
-make build_install
-```
-
-NOTE: This build script is busted.
+![Geometric ray tracing output](./examples/example_notebook_files/figure-commonmark/cell-8-output-1.png)
 
 ## Examples & Theory
 
-For more understanding of the software capability see [examples/examples.ipynb](https://github.com/mv-2/gUAcS/blob/master/examples/examples.ipynb). For details of the theory (which is not always completely up to date) see [docs/theory.pdf](https://github.com/mv-2/gUAcS/blob/master/docs/theory.pdf)
+For more understanding of the software capability see [examples/examples.md](https://github.com/mv-2/gUAcS/blob/master/examples/examples.ipynb). For details of the theory (which is not always completely up to date) see [docs/theory.pdf](https://github.com/mv-2/gUAcS/blob/master/docs/theory.pdf)

@@ -112,9 +112,8 @@ The spatial information for the rays looks convincing but it does not give any i
 ````
 # IsoSpace Ray Tracing
 As there may be some media which do not have a varying sound speed profile. To simulate these spaces the ``IsoSpace`` class is used. This class has a constant sound speed and density unlike the water column typically analysed. The config defined earlier can now be modified to include an Isospace over the entire solution space. Additionally the total number of rays and maximum number of iterations is reduced as the isospace tracing method differs from the variable sound speed tracing method.
+
 ````{python}
-
-
 prog_config_iso = ProgConfig(max_it=10, depth_step=1.0, max_range=1e5,
                          min_range=-1.0, output_path="output_data")
 sources_iso = [SourceConfig(range_pos=-1.0, depth_pos=1000.0,
