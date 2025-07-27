@@ -140,6 +140,7 @@ plt.show()
 ````
 
 # Beam Tracing
+## DRT System Solver
 The beam tracing process runs the initial geometric ray tracing algorithm followed by dynamic ray tracing and finally formulation of the beams. The beam intensity calculation is not yet implemented but some details on the dynamic ray tracing (DRT) system and $p-q$ equation evolution can be included here.
 
 Firstly modify the config file to have a $p-q$ equation solver from the selection of "BackwardEuler", "RungeKutta4", "Radau3IA" and "Radau3IIA".
@@ -185,3 +186,5 @@ fig.axes[2].set_ylim((-1e-10, 5e-10))
 fig.axes[3].set_ylim((-1e-5, 3e-3))
 ````
 This solver appears to be more stable but there are still significant issues with divergence after ~1000 iterations. Until this stability issue is explained or solved, pressure evaluation in the sound field cannot be accurately completed.
+
+## Pressure Field Test

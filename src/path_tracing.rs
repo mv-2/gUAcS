@@ -2,12 +2,15 @@ use crate::interface::{EnvConfig, IsoSpace, ProgConfig, RayConfig, SourceConfig}
 use crate::math_util::deboor_alg;
 use core::f64;
 use csv::Writer;
+use f64::consts::PI;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 use serde::Deserialize;
 use std::error::Error;
 use std::ops::RangeInclusive;
 use uuid::Uuid;
+
+const TWO_PI: f64 = 2.0 * PI;
 
 //TODO: NUCLEAR OPTION FOR REFLECTION CALCULATION
 pub const REFLECT_OFFSET: f64 = 0.1;
@@ -75,7 +78,7 @@ impl RayInit {
         };
 
         let ang_step: f64 = match source.n_rays == 1 {
-            true => 2.0 * f64::consts::PI,
+            true => TWO_PI,
             false => (source.ray_fan_limits[1] - source.ray_fan_limits[0]) / source.n_rays as f64,
         };
 
@@ -506,7 +509,7 @@ impl Body {
             % f64::consts::PI;
         ang = (ang + f64::consts::PI) % f64::consts::PI;
         match ang > f64::consts::PI / 2.0 {
-            true => ang - f64::consts::PI,
+            true => ang - f64::consts::FRAC_PI_2,
             false => ang,
         }
     }

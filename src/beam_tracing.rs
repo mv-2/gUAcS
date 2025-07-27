@@ -1,11 +1,15 @@
 use crate::interface::{BeamConfigRust, EnvConfig, IsoSpace, ProgConfig, SolverMethod};
 use crate::math_util::Mat2;
 use crate::path_tracing::{DirChange, Ray, RayInit, Ssp};
-use num::iter::RangeInclusive;
+use num::complex::Complex64;
 use num::Complex;
 use pyo3::prelude::*;
 use rayon::prelude::*;
+
 use std::f64::consts::PI;
+
+const TWO_PI: f64 = 2.0 * PI;
+const I: Complex<f64> = Complex::new(0.0, 1.0);
 
 /// Stores Beam propagation
 #[derive(Clone)]
@@ -13,6 +17,7 @@ pub struct Beam {
     pub central_ray: Ray,
     pub p_vals: Vec<Complex<f64>>,
     pub q_vals: Vec<Complex<f64>>,
+    pub c_vals: Vec<f64>,
     pub ang_step: f64,
 }
 
@@ -34,7 +39,7 @@ pub struct PyBeam {
 
 /// Stores locations to calculate pressure and calculated values corresponding to locations
 pub struct PressureField {
-    pub locations: Vec<(f64, f64)>,
+    pub locations: Vec<[f64; 2]>,
     pub pressures: Vec<Complex<f64>>,
 }
 
@@ -63,10 +68,12 @@ impl Beam {
             central_ray: Ray::init_from_cfgs(init_source, prog_config),
             p_vals: vec![Complex::ZERO; prog_config.max_it + 1],
             q_vals: vec![Complex::ZERO; prog_config.max_it + 1],
+            c_vals: vec![0.0; prog_config.max_it + 1],
             ang_step: init_source.ang_step,
         };
         bm.q_vals[0] = Complex::new(0.0, 1.0 / init_source.init_sound_speed);
         bm.p_vals[0] = Complex::new(1.0, 0.0);
+        bm.c_vals[0] = init_source.init_sound_speed;
         bm
     }
 
@@ -107,6 +114,7 @@ impl Beam {
                     .iso_trace(&env_config.isospaces[i], prog_config.max_it, &ang);
                 beam.update_pq_iso(&env_config.isospaces[i], 0);
                 beam.central_ray.truncate_ray();
+                beam.c_vals = vec![env_config.isospaces[i].sound_speed; beam.central_ray.ray_iter];
                 return beam;
             }
         }
@@ -117,6 +125,7 @@ impl Beam {
                 .range_lims
                 .contains(&beam.central_ray.range_vals[beam.central_ray.ray_iter]))
         {
+            beam.c_vals[beam.central_ray.ray_iter] = c_i;
             // calculate local sound speed gradient
             g_i = (c_i1 - c_i) / prog_config.depth_step;
             let arc_step: f64 = (((beam.central_ray.ray_param * c_i1).asin()
@@ -382,86 +391,100 @@ impl Beam {
         self.p_vals.truncate(self.central_ray.ray_iter + 1);
     }
 
-    fn calculate_valid_pq(
+    fn calculate_pressure_predicates(
         &self,
         range_receiver: &f64,
         depth_receiver: &f64,
-        window_width: Option<f64>,
-    ) -> Vec<[Complex<f64>; 2]> {
-        let mut pq_vals: Vec<[Complex<f64>; 2]> = vec![];
+    ) -> Vec<PressurePredicate> {
+        let mut predicates: Vec<PressurePredicate> = vec![];
         let mut range_step: f64;
         let mut depth_step: f64;
-        let mut range_intersect: f64;
+        let mut rng_intsct_perp: f64;
         let mut p: Complex<f64>;
         let mut q: Complex<f64>;
+        let mut time: f64;
+        let mut sound_speed: f64;
+        let mut interp_frac: f64;
+        let mut n: f64;
 
-        match window_width {
-            Some(width) => {
-                todo!();
-            }
-            None => {
-                for i in 0..self.central_ray.ray_iter {
-                    // TODO: move this function to math_util.rs as
-                    // interpolate_perpendicular_location
-                    range_step =
-                        self.central_ray.range_vals[i + 1] - self.central_ray.range_vals[i];
-                    depth_step =
-                        self.central_ray.depth_vals[i + 1] - self.central_ray.depth_vals[i];
-                    range_intersect = (range_step.powi(2) * range_receiver
-                        + depth_step.powi(2) * self.central_ray.range_vals[i]
-                        + range_step
-                            * depth_step
-                            * (depth_receiver - self.central_ray.depth_vals[i]))
-                        / (range_step.powi(2) + depth_step.powi(2));
-                    if ((range_intersect <= self.central_ray.range_vals[i + 1])
-                        && (range_intersect > self.central_ray.range_vals[i]))
-                        || ((range_intersect > self.central_ray.range_vals[i + 1])
-                            && (range_intersect <= self.central_ray.range_vals[i]))
-                    {
-                        // TODO: MAke this an interp function????
-                        // FIXME: this wont work for vertical rays right now
-                        let p: Complex<f64> = self.p_vals[i]
-                            + (range_intersect - self.central_ray.range_vals[i])
-                                * (self.p_vals[i + 1] - self.p_vals[i])
-                                / range_step;
-                        let q: Complex<f64> = self.q_vals[i]
-                            + (range_intersect - self.central_ray.range_vals[i])
-                                * (self.q_vals[i + 1] - self.q_vals[i])
-                                / range_step;
-                        pq_vals.push([p, q]);
-                    }
-                }
+        for i in 0..self.central_ray.ray_iter {
+            // TODO: move this function to math_util.rs as
+            // interpolate_perpendicular_location
+            range_step = self.central_ray.range_vals[i + 1] - self.central_ray.range_vals[i];
+            depth_step = self.central_ray.depth_vals[i + 1] - self.central_ray.depth_vals[i];
+            rng_intsct_perp = (range_step.powi(2) * range_receiver
+                + depth_step.powi(2) * self.central_ray.range_vals[i]
+                + range_step * depth_step * (depth_receiver - self.central_ray.depth_vals[i]))
+                / (range_step.powi(2) + depth_step.powi(2));
+            if ((rng_intsct_perp <= self.central_ray.range_vals[i + 1])
+                && (rng_intsct_perp > self.central_ray.range_vals[i]))
+                || ((rng_intsct_perp > self.central_ray.range_vals[i + 1])
+                    && (rng_intsct_perp <= self.central_ray.range_vals[i]))
+            {
+                // TODO: MAke this an interp function????
+                // FIXME: this wont work for vertical rays right now
+                interp_frac = (rng_intsct_perp - self.central_ray.range_vals[i]) / range_step;
+                n = ((range_receiver - self.central_ray.range_vals[i]) * depth_step
+                    - (depth_receiver - self.central_ray.depth_vals[i]) * range_step)
+                    / (range_step.powi(2) + depth_step.powi(2)).sqrt();
+                p = self.p_vals[i] + interp_frac * (self.p_vals[i + 1] - self.p_vals[i]);
+                q = self.q_vals[i] + interp_frac * (self.q_vals[i + 1] - self.q_vals[i]);
+                time = self.central_ray.time_vals[i]
+                    + interp_frac
+                        * (self.central_ray.time_vals[i + 1] - self.central_ray.time_vals[i]);
+                sound_speed = self.c_vals[i] + interp_frac * (self.c_vals[i + 1] - self.c_vals[i]);
+                predicates.push(PressurePredicate {
+                    p,
+                    q,
+                    time,
+                    sound_speed,
+                    n,
+                });
             }
         }
-        todo!();
+        vec![]
     }
 
-    pub fn calculate_pressures(
-        &self,
-        range: &f64,
-        depth: &f64,
-        window_width: Option<f64>,
-    ) -> Vec<Complex<f64>> {
-        let pq_vals: Vec<[Complex<f64>; 2]> = self.calculate_valid_pq(range, depth, window_width);
-        todo!();
+    pub fn calculate_pressure(&self, range: &f64, depth: &f64) -> Complex<f64> {
+        let pre_pressures: Vec<PressurePredicate> =
+            self.calculate_pressure_predicates(range, depth);
+        let ang_freq: f64 = TWO_PI * self.central_ray.frequency;
+        pre_pressures
+            .iter()
+            .map(|ent| ent.calculate_contribution(ang_freq))
+            .sum::<Complex<f64>>()
+    }
+}
+
+/// struct to hold required values for calculating pressure contribution of beam
+struct PressurePredicate {
+    p: Complex<f64>,
+    q: Complex<f64>,
+    time: f64,
+    sound_speed: f64,
+    n: f64,
+}
+
+impl PressurePredicate {
+    /// Calculate ray coordinate contribution, disregarding spreading law
+    pub fn calculate_contribution(&self, ang_freq: f64) -> Complex<f64> {
+        (self.sound_speed / self.q).sqrt()
+            * (I * ang_freq * (self.time + self.p * self.n.powi(2) / (self.q + self.q))).exp()
     }
 }
 
 pub fn evaluate_field(beam_config: BeamConfigRust, beams: Vec<Beam>) -> PressureField {
     // TODO: Check efficiency gains with par_iter() calls in different nest levels
-    for range_depth in beam_config.pressure_locs {
+    let pressures: Vec<Complex<f64>> = vec![I; beam_config.pressure_locs.len()];
+    for range_depth in &beam_config.pressure_locs {
         beams
             .iter()
-            .map(|bm| {
-                bm.calculate_pressures(&range_depth[0], &range_depth[1], beam_config.window_width)
-                    .iter()
-                    .sum::<Complex<f64>>()
-            })
+            .map(|bm| bm.calculate_pressure(&range_depth[0], &range_depth[1]))
             .sum::<Complex<f64>>();
     }
     PressureField {
-        locations: vec![],
-        pressures: vec![],
+        locations: beam_config.pressure_locs,
+        pressures,
     }
 }
 
