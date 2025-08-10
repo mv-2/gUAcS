@@ -64,3 +64,12 @@ class PyBeam:
     q_re: List[float]
     p_im: List[float]
     q_im: List[float]
+
+class BeamResult:
+    beams: List[PyBeam]
+    pressures: PressureField
+
+class PressureField:
+    locations: List[Tuple[float, float]]
+    re: List[float]
+    im: list[float]

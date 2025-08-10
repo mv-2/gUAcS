@@ -15,8 +15,7 @@ from typing import List, Iterable
 def munk_profile(depth: float) -> float:
     return 1500.0 * (
         1.0
-        + 0.00737 * (2 * (depth - 1300) / 1500 - 1 +
-                     np.exp(-2 * (depth - 1300) / 1500))
+        + 0.00737 * (2 * (depth - 1300) / 1500 - 1 + np.exp(-2 * (depth - 1300) / 1500))
     )
 
 
@@ -33,8 +32,7 @@ def fix_rays(raw_rays: list) -> List[Ray]:
 
 
 def plot_environment(cfg_file: RayConfig) -> List:
-    fig, ax = plt.subplots(1, 2, sharey=True, gridspec_kw={
-                           "width_ratios": [1, 4]})
+    fig, ax = plt.subplots(1, 2, sharey=True, gridspec_kw={"width_ratios": [1, 4]})
     bodies = cfg_file.env_config.bodies
     ssp = cfg_file.env_config.ssp
     isospaces = cfg_file.env_config.isospaces
@@ -67,8 +65,7 @@ def plot_environment(cfg_file: RayConfig) -> List:
 
     ax_rays.set_xlabel("Range [$km$]")
     ax_rays.set_xlim(
-        [cfg_file.prog_config.min_range / 1000,
-            cfg_file.prog_config.max_range / 1000]
+        [cfg_file.prog_config.min_range / 1000, cfg_file.prog_config.max_range / 1000]
     )
 
     return [fig, ax_rays, ax_ssp, ax_g]

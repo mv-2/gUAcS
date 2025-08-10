@@ -1,5 +1,5 @@
 from guacs.guacs import (
-    trace_rays,
+    BeamResult,
     trace_beams,
     RayConfig,
     BeamConfig,
@@ -89,11 +89,13 @@ if __name__ == "__main__":
         pressure_locs=[],
         window_width=1000,
     )
-    rays = trace_rays(ray_config)
-    # beams = trace_beams(beam_config)
+    # rays = trace_rays(ray_config)
+    beam_result: BeamResult = trace_beams(beam_config)
+    print(beam_result.__dir__())
+    # beams = beam_result.beams
     # rays = [bm.central_ray for bm in beams]
-    rays = fix_rays(rays)
-    ray_fig = plot_rays(ray_config, rays)
+    # rays = fix_rays(rays)
+    # ray_fig = plot_rays(ray_config, rays)
     # pq_fig = plot_pq(beams)
     # ani = animate_propagation(config, rays, 10, fast_fwd=100)
-    plt.show()
+    # plt.show()

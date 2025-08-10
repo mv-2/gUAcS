@@ -1,3 +1,4 @@
+use crate::beam_tracing::{PressureField, PyBeam};
 use crate::path_tracing::{Body, Ssp};
 
 use pyo3::prelude::*;
@@ -24,16 +25,17 @@ pub struct BeamConfig {
     #[pyo3(get, set)]
     pq_solver: String,
     #[pyo3(get, set)]
-    pressure_locs: Vec<[f64; 2]>,
+    pressure_locs: Vec<(f64, f64)>,
     #[pyo3(get, set)]
     window_width: Option<f64>,
 }
 
 /// Beam Config struct for rust
+#[derive(Clone)]
 pub struct BeamConfigRust {
     pub ray_config: RayConfig,
     pub pq_solver: SolverMethod,
-    pub pressure_locs: Vec<[f64; 2]>,
+    pub pressure_locs: Vec<(f64, f64)>,
     pub window_width: Option<f64>,
 }
 
@@ -107,6 +109,35 @@ pub struct IsoSpace {
     pub sound_speed: f64,
     #[pyo3(get, set)]
     pub density: f64,
+}
+
+/// Python equivalent to [`PressureField`] object to allow for Complex values to be transmitted
+/// correctly
+#[pyclass]
+pub struct PressureFieldPy {
+    #[pyo3(get, set)]
+    pub locations: Vec<(f64, f64)>,
+    #[pyo3(get, set)]
+    pub re: Vec<f64>,
+    #[pyo3(get, set)]
+    pub im: Vec<f64>,
+}
+
+/// Make py object from rust struct
+impl From<PressureField> for PressureFieldPy {
+    fn from(pressure_field: PressureField) -> Self {
+        PressureFieldPy {
+            locations: pressure_field.locations,
+            re: pressure_field.pressures.iter().map(|&z| z.re).collect(),
+            im: pressure_field.pressures.iter().map(|&z| z.im).collect(),
+        }
+    }
+}
+
+#[pyclass]
+pub struct BeamResult {
+    pub beams: Vec<PyBeam>,
+    pub pressures: PressureField,
 }
 
 // Python __new__ constructors for required structs
@@ -218,7 +249,7 @@ impl BeamConfig {
     fn py_new(
         ray_config: RayConfig,
         pq_solver: String,
-        pressure_locs: Vec<[f64; 2]>,
+        pressure_locs: Vec<(f64, f64)>,
         window_width: Option<f64>,
     ) -> Self {
         BeamConfig {

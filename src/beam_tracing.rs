@@ -1,7 +1,6 @@
 use crate::interface::{BeamConfigRust, EnvConfig, IsoSpace, ProgConfig, SolverMethod};
 use crate::math_util::Mat2;
 use crate::path_tracing::{DirChange, Ray, RayInit, Ssp};
-use num::complex::Complex64;
 use num::Complex;
 use pyo3::prelude::*;
 use rayon::prelude::*;
@@ -39,7 +38,7 @@ pub struct PyBeam {
 
 /// Stores locations to calculate pressure and calculated values corresponding to locations
 pub struct PressureField {
-    pub locations: Vec<[f64; 2]>,
+    pub locations: Vec<(f64, f64)>,
     pub pressures: Vec<Complex<f64>>,
 }
 
@@ -407,6 +406,8 @@ impl Beam {
         let mut interp_frac: f64;
         let mut n: f64;
 
+        // Iterate through entire ray and bracket between each point to determine if receiver is
+        // perpendicular to ray
         for i in 0..self.central_ray.ray_iter {
             // TODO: move this function to math_util.rs as
             // interpolate_perpendicular_location
@@ -421,7 +422,7 @@ impl Beam {
                 || ((rng_intsct_perp > self.central_ray.range_vals[i + 1])
                     && (rng_intsct_perp <= self.central_ray.range_vals[i]))
             {
-                // TODO: MAke this an interp function????
+                // TODO: Make this an interp function????
                 // FIXME: this wont work for vertical rays right now
                 interp_frac = (rng_intsct_perp - self.central_ray.range_vals[i]) / range_step;
                 n = ((range_receiver - self.central_ray.range_vals[i]) * depth_step
@@ -442,13 +443,15 @@ impl Beam {
                 });
             }
         }
-        vec![]
+        predicates
     }
 
+    /// Calculate pressure contribution from ray [`self`] at point [range, depth]
     pub fn calculate_pressure(&self, range: &f64, depth: &f64) -> Complex<f64> {
         let pre_pressures: Vec<PressurePredicate> =
             self.calculate_pressure_predicates(range, depth);
         let ang_freq: f64 = TWO_PI * self.central_ray.frequency;
+        // map over pressure predicates and sum all pressure contributions from Beam self
         pre_pressures
             .iter()
             .map(|ent| ent.calculate_contribution(ang_freq))
@@ -473,13 +476,14 @@ impl PressurePredicate {
     }
 }
 
+/// Evaluate pressure field at required locations from [`BeamConfigRust`]
 pub fn evaluate_field(beam_config: BeamConfigRust, beams: Vec<Beam>) -> PressureField {
     // TODO: Check efficiency gains with par_iter() calls in different nest levels
     let pressures: Vec<Complex<f64>> = vec![I; beam_config.pressure_locs.len()];
     for range_depth in &beam_config.pressure_locs {
         beams
             .iter()
-            .map(|bm| bm.calculate_pressure(&range_depth[0], &range_depth[1]))
+            .map(|bm| bm.calculate_pressure(&range_depth.0, &range_depth.1))
             .sum::<Complex<f64>>();
     }
     PressureField {
