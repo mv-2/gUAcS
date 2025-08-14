@@ -261,6 +261,22 @@ impl BeamConfig {
     }
 }
 
+#[pymethods]
+impl PressureFieldPy {
+    #[new]
+    fn py_new(locations: Vec<(f64, f64)>, re: Vec<f64>, im: Vec<f64>) -> Self {
+        PressureFieldPy { locations, re, im }
+    }
+}
+
+#[pymethods]
+impl BeamResult {
+    #[new]
+    fn py_new(beams: Vec<PyBeam>, pressures: PressureFieldPy) -> Self {
+        BeamResult { beams, pressures }
+    }
+}
+
 // Enum to set solver method for p-q equations
 #[derive(Clone, Copy)]
 pub enum SolverMethod {

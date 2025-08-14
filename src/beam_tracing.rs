@@ -1,5 +1,5 @@
 use crate::interface::{BeamConfigRust, EnvConfig, IsoSpace, ProgConfig, SolverMethod};
-use crate::math_util::Mat2;
+use crate::math_util::{Mat2, TWO_PI};
 use crate::path_tracing::{DirChange, Ray, RayInit, Ssp};
 use num::Complex;
 use pyo3::prelude::*;
@@ -7,7 +7,6 @@ use rayon::prelude::*;
 
 use std::f64::consts::PI;
 
-const TWO_PI: f64 = 2.0 * PI;
 const I: Complex<f64> = Complex::new(0.0, 1.0);
 
 /// Stores Beam propagation

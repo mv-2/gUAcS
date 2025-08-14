@@ -1,16 +1,13 @@
 use crate::interface::{EnvConfig, IsoSpace, ProgConfig, RayConfig, SourceConfig};
-use crate::math_util::deboor_alg;
+use crate::math_util::{deboor_alg, TWO_PI};
 use core::f64;
 use csv::Writer;
-use f64::consts::PI;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 use serde::Deserialize;
 use std::error::Error;
 use std::ops::RangeInclusive;
 use uuid::Uuid;
-
-const TWO_PI: f64 = 2.0 * PI;
 
 //TODO: NUCLEAR OPTION FOR REFLECTION CALCULATION
 pub const REFLECT_OFFSET: f64 = 0.1;

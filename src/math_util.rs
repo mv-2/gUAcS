@@ -1,3 +1,8 @@
+use std::f64::consts::PI;
+
+// Double PI constant defined here
+pub const TWO_PI: f64 = PI + PI;
+
 /// Calculates value for B-spline based on knots, coefficients, order and position
 pub fn deboor_alg(x: f64, knots: &[f64], coeffs: &[f64], order: usize) -> f64 {
     // Assume that knots are sorted into increasing order
@@ -101,6 +106,7 @@ impl Mat2<f64> {
         Mat2 { a, b, c, d }
     }
 
+    /// Identity matrix definition
     pub const I: Self = Self::new(1_f64, 0_f64, 0_f64, 1_f64);
 
     /// returns inverted [`Mat2`] struct
