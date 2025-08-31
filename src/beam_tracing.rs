@@ -130,6 +130,9 @@ impl Beam {
                 - (beam.central_ray.ray_param * c_i).asin())
                 / (g_i * beam.central_ray.ray_param))
                 .abs();
+            assert!(!(beam.central_ray.ray_param * c_i1).asin().is_nan());
+            assert!(!(beam.central_ray.ray_param * c_i).asin().is_nan());
+            assert!(g_i * beam.central_ray.ray_param != 0_f64);
             // Update p-q equations
             beam.update_pq(
                 &c_i,
@@ -305,10 +308,10 @@ impl Beam {
             d: 0_f64,
         };
         let coeff_mat: Mat2<f64> = (Mat2::I
-            - (arc_step / 12_f64)
-                * (5_f64 * mat_ai1_3 - 2_f64 * mat_ai1_3 * mat_ai1 + 3_f64 * mat_ai1))
+            - (arc_step / 12_f64) * mat_ai1_3 * (5_f64 * Mat2::I - 2_f64 * arc_step * mat_ai1)
+            - (arc_step / 4_f64) * mat_ai1)
             .inv()
-            * (Mat2::I + (arc_step / 4_f64) * mat_ai1_3);
+            * (Mat2::I + (arc_step / 3_f64) * mat_ai1_3);
         let i: usize = self.central_ray.ray_iter;
         self.q_vals[i + 1] = coeff_mat.a * self.q_vals[i] + coeff_mat.b * self.p_vals[i];
         self.p_vals[i + 1] = coeff_mat.c * self.q_vals[i] + coeff_mat.d * self.p_vals[i];
@@ -471,7 +474,7 @@ impl PressurePredicate {
     /// Calculate ray coordinate contribution, disregarding spreading law
     pub fn calculate_contribution(&self, ang_freq: f64) -> Complex<f64> {
         (self.sound_speed / self.q).sqrt()
-            * (I * ang_freq * (self.time + self.p * self.n.powi(2) / (self.q + self.q))).exp()
+            * (-I * ang_freq * (self.time + self.p * self.n.powi(2) / (self.q + self.q))).exp()
     }
 }
 

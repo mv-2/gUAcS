@@ -33,7 +33,7 @@ if __name__ == "__main__":
             range_pos=0.0,
             depth_pos=1000.0,
             ray_fan_limits=(-0.1, 0.2),
-            n_rays=200,
+            n_rays=1,
             source_level=150,
             frequency=1000,
         )
