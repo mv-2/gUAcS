@@ -11,10 +11,19 @@ from guacs.guacs import (
     Ssp,
 )
 from scipy.interpolate import splrep
-import matplotlib.pyplot as plt
+import numpy as np
+
+# import matplotlib.pyplot as plt
 from typing import Tuple
 import matplotlib
-from python_utils import munk_profile, fix_rays, plot_rays, animate_propagation, plot_pq
+from python_utils import (
+    munk_profile,
+    # fix_rays,
+    # plot_rays,
+    # animate_propagation,
+    # plot_pq,
+    plot_sound_field,
+)
 
 matplotlib.use("QtAgg")
 
@@ -83,15 +92,23 @@ if __name__ == "__main__":
     ray_config = RayConfig(
         prog_config=prog_config, env_config=env_config, sources=sources
     )
+
+    ranges = np.linspace(0, 1e5, 100001)
+    depths = np.linspace(0, 5e3, 5001)
+    ranges, depths = np.meshgrid(ranges, depths)
+    ranges = ranges.flatten()
+    depths = depths.flatten()
+    locs = [(ranges[i], depths[i]) for i in range(len(ranges))]
+
     beam_config = BeamConfig(
         ray_config=ray_config,
         pq_solver="Radau3IIA",
-        pressure_locs=[],
-        window_width=1000,
+        pressure_locs=locs,
+        window_width=None,
     )
     # rays = trace_rays(ray_config)
     beam_result: BeamResult = trace_beams(beam_config)
-    print(beam_result.__dir__())
+    plot_sound_field(cfg=beam_config.ray_config, beam_res=beam_result)
     # beams = beam_result.beams
     # rays = [bm.central_ray for bm in beams]
     # rays = fix_rays(rays)

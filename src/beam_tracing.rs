@@ -21,7 +21,7 @@ pub struct Beam {
 
 /// Interface to python as Complex<f64> has no pyo3 type for conversion
 #[pyclass]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PyBeam {
     #[pyo3(get, set)]
     pub central_ray: Ray,
@@ -476,15 +476,18 @@ impl PressurePredicate {
 }
 
 /// Evaluate pressure field at required locations from [`BeamConfigRust`]
-pub fn evaluate_field(beam_config: BeamConfigRust, beams: Vec<Beam>) -> PressureField {
+pub fn evaluate_field(beam_config: BeamConfigRust, beams: &[Beam]) -> PressureField {
     // TODO: Check efficiency gains with par_iter() calls in different nest levels
-    let pressures: Vec<Complex<f64>> = vec![I; beam_config.pressure_locs.len()];
-    for range_depth in &beam_config.pressure_locs {
-        beams
-            .iter()
-            .map(|bm| bm.calculate_pressure(&range_depth.0, &range_depth.1))
-            .sum::<Complex<f64>>();
-    }
+    let pressures: Vec<Complex<f64>> = beam_config
+        .pressure_locs
+        .iter()
+        .map(|(range, depth)| {
+            beams
+                .iter()
+                .map(|bm| bm.calculate_pressure(range, depth))
+                .sum::<Complex<f64>>()
+        })
+        .collect();
     PressureField {
         locations: beam_config.pressure_locs,
         pressures,

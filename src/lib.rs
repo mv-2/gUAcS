@@ -6,7 +6,7 @@ pub mod path_tracing;
 use beam_tracing::evaluate_field;
 use pyo3::prelude::*;
 
-use crate::beam_tracing::{trace_beams, Beam, PyBeam};
+use crate::beam_tracing::{trace_beams, Beam, PressureField, PyBeam};
 use crate::interface::*;
 use crate::path_tracing::{trace_rays, Body, Ray, Ssp};
 
@@ -23,10 +23,11 @@ fn python_rays(config: RayConfig) -> PyResult<Vec<Ray>> {
 fn python_beams(config: BeamConfig) -> PyResult<BeamResult> {
     let rust_config: BeamConfigRust = BeamConfigRust::from(config);
     let beams: Vec<Beam> = trace_beams(rust_config.clone());
+    let pressures: PressureField = evaluate_field(rust_config, &beams);
     Ok(BeamResult {
         // TEST: check if par_iter() is worth the call here (probably not)
         beams: beams.iter().map(|bm| PyBeam::from_beam(bm)).collect(),
-        pressures: evaluate_field(rust_config, beams),
+        pressures: PressureFieldPy::from(pressures),
     })
 }
 

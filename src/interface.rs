@@ -113,6 +113,7 @@ pub struct IsoSpace {
 
 /// Python equivalent to [`PressureField`] object to allow for Complex values to be transmitted
 /// correctly
+#[derive(Clone)]
 #[pyclass]
 pub struct PressureFieldPy {
     #[pyo3(get, set)]
@@ -136,8 +137,10 @@ impl From<PressureField> for PressureFieldPy {
 
 #[pyclass]
 pub struct BeamResult {
+    #[pyo3(get, set)]
     pub beams: Vec<PyBeam>,
-    pub pressures: PressureField,
+    #[pyo3(get, set)]
+    pub pressures: PressureFieldPy,
 }
 
 // Python __new__ constructors for required structs

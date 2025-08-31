@@ -1,8 +1,4 @@
-from guacs.guacs import (
-    RayConfig,
-    Ray,
-    PyBeam,
-)
+from guacs.guacs import RayConfig, Ray, PyBeam, BeamConfig, BeamResult
 import numpy as np
 from scipy.interpolate import splev
 import matplotlib.pyplot as plt
@@ -144,3 +140,36 @@ def animate_propagation(
         fig, update_frame, frames=len(time_vals), interval=1000 / (framerate * fast_fwd)
     )
     return ani
+
+
+def plot_sound_field(cfg: BeamConfig, beam_res: BeamResult):
+    # fig, ax, _, _ = plot_environment(cfg)
+    magnitudes = beam_res.pressures.re
+    ranges = [loc[0] / 1000.0 for loc in beam_res.pressures.locations]
+    depths = [loc[1] for loc in beam_res.pressures.locations]
+    magnitudes = [
+        0.0 if np.isnan(magnitudes[i]) else 20 * np.log10(np.abs(magnitudes[i]) / 1e-6)
+        for i in range(len(magnitudes))
+    ]
+
+    n_ranges = len(np.unique(ranges))
+    n_depths = len(np.unique(depths))
+    new_shape = (n_ranges, n_depths)
+    ranges = np.reshape(ranges, new_shape)
+    depths = np.reshape(depths, new_shape)
+    magnitudes = np.reshape(magnitudes, new_shape)
+
+    print(magnitudes)
+    plt.figure()
+    plt.pcolormesh(
+        ranges,
+        depths,
+        magnitudes,
+        shading="gouraud",
+        cmap="jet",
+        vmin=0,
+        vmax=100,
+    )
+    plt.colorbar()
+
+    plt.show()
