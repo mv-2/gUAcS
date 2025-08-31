@@ -71,5 +71,5 @@ class BeamResult:
 
 class PressureField:
     locations: List[Tuple[float, float]]
-    re: List[float]
-    im: list[float]
+    mag: List[float]
+    phase: list[float]

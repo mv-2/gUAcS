@@ -480,7 +480,7 @@ pub fn evaluate_field(beam_config: BeamConfigRust, beams: &[Beam]) -> PressureFi
     // TODO: Check efficiency gains with par_iter() calls in different nest levels
     let pressures: Vec<Complex<f64>> = beam_config
         .pressure_locs
-        .iter()
+        .par_iter()
         .map(|(range, depth)| {
             beams
                 .iter()

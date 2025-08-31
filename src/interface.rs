@@ -119,9 +119,9 @@ pub struct PressureFieldPy {
     #[pyo3(get, set)]
     pub locations: Vec<(f64, f64)>,
     #[pyo3(get, set)]
-    pub re: Vec<f64>,
+    pub mag: Vec<f64>,
     #[pyo3(get, set)]
-    pub im: Vec<f64>,
+    pub phase: Vec<f64>,
 }
 
 /// Make py object from rust struct
@@ -129,8 +129,8 @@ impl From<PressureField> for PressureFieldPy {
     fn from(pressure_field: PressureField) -> Self {
         PressureFieldPy {
             locations: pressure_field.locations,
-            re: pressure_field.pressures.iter().map(|&z| z.re).collect(),
-            im: pressure_field.pressures.iter().map(|&z| z.im).collect(),
+            mag: pressure_field.pressures.iter().map(|&z| z.norm()).collect(),
+            phase: pressure_field.pressures.iter().map(|&z| z.arg()).collect(),
         }
     }
 }
@@ -267,8 +267,12 @@ impl BeamConfig {
 #[pymethods]
 impl PressureFieldPy {
     #[new]
-    fn py_new(locations: Vec<(f64, f64)>, re: Vec<f64>, im: Vec<f64>) -> Self {
-        PressureFieldPy { locations, re, im }
+    fn py_new(locations: Vec<(f64, f64)>, mag: Vec<f64>, phase: Vec<f64>) -> Self {
+        PressureFieldPy {
+            locations,
+            mag,
+            phase,
+        }
     }
 }
 

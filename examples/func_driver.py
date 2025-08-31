@@ -93,8 +93,8 @@ if __name__ == "__main__":
         prog_config=prog_config, env_config=env_config, sources=sources
     )
 
-    ranges = np.linspace(0, 1e5, 100001)
-    depths = np.linspace(0, 5e3, 5001)
+    ranges = np.linspace(0, 1e4, 1001)
+    depths = np.linspace(0, 5e3, 501)
     ranges, depths = np.meshgrid(ranges, depths)
     ranges = ranges.flatten()
     depths = depths.flatten()
