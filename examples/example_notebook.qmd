@@ -28,7 +28,9 @@ from python_utils import (
   munk_profile,
   plot_rays,
   plot_pq,
+  plot_sound_field
 )
+import numpy as np
 from datetime import datetime
 from IPython.display import HTML
 ````
@@ -140,7 +142,7 @@ plt.show()
 ````
 
 # Beam Tracing
-## DRT System Solver
+## P-Q Calculation
 The beam tracing process runs the initial geometric ray tracing algorithm followed by dynamic ray tracing and finally formulation of the beams. The beam intensity calculation is not yet implemented but some details on the dynamic ray tracing (DRT) system and $p-q$ equation evolution can be included here.
 
 Firstly modify the config file to have a $p-q$ equation solver from the selection of "BackwardEuler", "RungeKutta4", "Radau3IA" and "Radau3IIA".
@@ -148,25 +150,31 @@ Firstly modify the config file to have a $p-q$ equation solver from the selectio
 prog_config = ProgConfig(max_it=int(1e5), max_range=2e5, min_range=-1.0,
                          depth_step=1.0, output_path="output_data")
 ray_config = RayConfig(prog_config=prog_config,
-                       env_config=env_config, sources=sources)
+                       env_config=env_config, sources=sources_iso)
+ranges = np.linspace(0, 5e4, 5001)
+depths = np.linspace(0, 5e3, 501)
+ranges, depths = np.meshgrid(ranges, depths)
+ranges = ranges.flatten()
+depths = depths.flatten()
+locs = [(ranges[i], depths[i]) for i in range(len(ranges))]
 beam_config = BeamConfig(
     ray_config=ray_config, pq_solver="RungeKutta4", pressure_locs=[], window_width=None)
 ````
 To run the simulation call the ``trace_beams`` function.
 ````{python}
 t0 = datetime.now()
-beams = trace_beams(beam_config)
+beam_res = trace_beams(beam_config)
 t = datetime.now() - t0
 print(f"Time required to complete simulation: {t}")
 ````
 By taking the central ray from each beam object the same ray propagation plot can be created as before with the ray tracing approach.
 ````{python}
-rays = [bm.central_ray for bm in beams]
+rays = [bm.central_ray for bm in beam_res.beams]
 ray_fig = plot_rays(config, rays)
 ````
 The $p-q$ variables (as defined in docs/theory.pdf) can also be viewed to determine if the solver is stable.
 ````{python}
-fig = plot_pq(beams[0:10])
+fig = plot_pq(beam_res.beams[0:10])
 fig.axes[0].set_xlim((0, 10))
 fig.axes[1].set_xlim((-1, 10))
 fig.axes[2].set_xlim((0, 20))
@@ -177,14 +185,18 @@ By inspection, the RungeKutta4 method is unstable. This is likely as it is an ex
 beam_config = BeamConfig(
     ray_config=ray_config, pq_solver="Radau3IIA", pressure_locs=[], window_width=None)
 t0 = datetime.now()
-beams = trace_beams(beam_config)
+beam_res = trace_beams(beam_config)
 t = datetime.now() - t0
 print(f"Time required to complete simulation: {t}")
-fig = plot_pq(beams[0:10])
+fig = plot_pq(beam_res.beams[0:10])
 fig.axes[0].set_ylim((-1, 5))
 fig.axes[2].set_ylim((-1e-10, 5e-10))
 fig.axes[3].set_ylim((-1e-5, 3e-3))
 ````
 This solver appears to be more stable but there are still significant issues with divergence after ~1000 iterations. Until this stability issue is explained or solved, pressure evaluation in the sound field cannot be accurately completed.
 
-## Pressure Field Test
+## Pressure Field
+Calculation of the pressure field does not appear to be working correctly although it is unclear if this is an artefact of the shading or the result at this point in time.
+````{python}
+plot_sound_field(cfg=beam_config.ray_config, beam_res=beam_res)
+````

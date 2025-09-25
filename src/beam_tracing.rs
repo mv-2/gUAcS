@@ -126,23 +126,6 @@ impl Beam {
             beam.c_vals[beam.central_ray.ray_iter] = c_i;
             // calculate local sound speed gradient
             g_i = (c_i1 - c_i) / prog_config.depth_step;
-            let arc_step: f64 = (((beam.central_ray.ray_param * c_i1).asin()
-                - (beam.central_ray.ray_param * c_i).asin())
-                / (g_i * beam.central_ray.ray_param))
-                .abs();
-            assert!(!(beam.central_ray.ray_param * c_i1).asin().is_nan());
-            assert!(!(beam.central_ray.ray_param * c_i).asin().is_nan());
-            assert!(g_i * beam.central_ray.ray_param != 0_f64);
-            // Update p-q equations
-            beam.update_pq(
-                &c_i,
-                &c_i1,
-                &c_im1,
-                &c_i2,
-                &arc_step,
-                &prog_config.depth_step,
-                pq_solver,
-            );
             // iterate depth step. Match statement to update ssp variables as required
             match beam.central_ray.update_iteration(
                 &c_i,
@@ -152,11 +135,47 @@ impl Beam {
                 &prog_config.depth_step,
             ) {
                 DirChange::KeepDir => {
+                    let arc_step: f64 = (((beam.central_ray.ray_param * c_i1).asin()
+                        - (beam.central_ray.ray_param * c_i).asin())
+                        / (g_i * beam.central_ray.ray_param))
+                        .abs();
+                    // Update p-q equations
+                    beam.update_pq(
+                        &c_i,
+                        &c_i1,
+                        &c_im1,
+                        &c_i2,
+                        &arc_step,
+                        &prog_config.depth_step,
+                        pq_solver,
+                    );
                     c_im1 = c_i;
                     c_i = c_i1;
                     c_i1 = c_i2;
                 }
                 DirChange::ChangeDir => {
+                    // TEST: This is currently an assumption that because the ray turning case
+                    // occurs at (ray_param * c_i1).abs() == 1, the distance covered in this layer
+                    // of the ray iteration can be calculated from 2 * the distance to reach this
+                    // case. When ray_param*c_i1 == +-1, (ray_param*c_i1) == +- pi/2. Unsure if the
+                    // negative case ever occurs but including now until I can work through the
+                    // derivation to check this.
+                    let arc_step: f64 = 2.0
+                        * (((beam.central_ray.ray_param * c_i1).signum()
+                            * std::f64::consts::FRAC_2_PI
+                            - (beam.central_ray.ray_param * c_i).asin())
+                            / (g_i * beam.central_ray.ray_param))
+                            .abs();
+                    // Update p-q equations
+                    beam.update_pq(
+                        &c_i,
+                        &c_i1,
+                        &c_im1,
+                        &c_i2,
+                        &arc_step,
+                        &prog_config.depth_step,
+                        pq_solver,
+                    );
                     std::mem::swap(&mut c_im1, &mut c_i1);
                     depth_dir = -depth_dir;
                 }

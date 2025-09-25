@@ -143,7 +143,7 @@ def animate_propagation(
 
 
 def plot_sound_field(cfg: BeamConfig, beam_res: BeamResult):
-    fig, ax, _, _ = plot_environment(cfg)
+    _, ax, _, _ = plot_environment(cfg)
     ranges = [loc[0] / 1000.0 for loc in beam_res.pressures.locations]
     depths = [loc[1] for loc in beam_res.pressures.locations]
     magnitudes = beam_res.pressures.mag

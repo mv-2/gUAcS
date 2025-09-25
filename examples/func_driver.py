@@ -66,7 +66,7 @@ if __name__ == "__main__":
     ]
 
     max_depth = 5000
-    depth_step = 100
+    depth_step = 10
     ssp_depths = range(-2 * depth_step, max_depth + 3 * depth_step, depth_step)
     ssp_vals = [munk_profile(z) for z in ssp_depths]
 
@@ -78,7 +78,7 @@ if __name__ == "__main__":
             ssp_knots=spline_res[0], ssp_coefs=spline_res[1], ssp_degree=spline_res[2]
         ),
         swell_height=0.0,
-        isospaces=[],
+        isospaces=isospaces,
     )
 
     prog_config = ProgConfig(
@@ -93,7 +93,7 @@ if __name__ == "__main__":
         prog_config=prog_config, env_config=env_config, sources=sources
     )
 
-    ranges = np.linspace(0, 1e4, 1001)
+    ranges = np.linspace(0, 5e4, 5001)
     depths = np.linspace(0, 5e3, 501)
     ranges, depths = np.meshgrid(ranges, depths)
     ranges = ranges.flatten()
