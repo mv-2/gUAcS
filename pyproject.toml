@@ -21,6 +21,8 @@ dependencies = [
   "pyyaml",
   "ipykernel",
   "maturin",
+  "nbclient",
+  "nbformat",
 ]
 dynamic = ["version"]
 [tool.maturin]
