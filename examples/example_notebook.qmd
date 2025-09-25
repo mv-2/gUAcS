@@ -151,12 +151,6 @@ prog_config = ProgConfig(max_it=int(1e5), max_range=2e5, min_range=-1.0,
                          depth_step=1.0, output_path="output_data")
 ray_config = RayConfig(prog_config=prog_config,
                        env_config=env_config, sources=sources_iso)
-ranges = np.linspace(0, 5e4, 5001)
-depths = np.linspace(0, 5e3, 501)
-ranges, depths = np.meshgrid(ranges, depths)
-ranges = ranges.flatten()
-depths = depths.flatten()
-locs = [(ranges[i], depths[i]) for i in range(len(ranges))]
 beam_config = BeamConfig(
     ray_config=ray_config, pq_solver="RungeKutta4", pressure_locs=[], window_width=None)
 ````
@@ -182,8 +176,14 @@ fig.axes[3].set_xlim((0, 10))
 ````
 By inspection, the RungeKutta4 method is unstable. This is likely as it is an explicity solver. For a better chance, try the Radau3IIA method as this is an implicit solver for stiff equations.
 ````{python}
+ranges = np.linspace(0, 5e4, 5001)
+depths = np.linspace(0, 5e3, 501)
+ranges, depths = np.meshgrid(ranges, depths)
+ranges = ranges.flatten()
+depths = depths.flatten()
+locs = [(ranges[i], depths[i]) for i in range(len(ranges))]
 beam_config = BeamConfig(
-    ray_config=ray_config, pq_solver="Radau3IIA", pressure_locs=[], window_width=None)
+    ray_config=ray_config, pq_solver="Radau3IIA", pressure_locs=locs, window_width=None)
 t0 = datetime.now()
 beam_res = trace_beams(beam_config)
 t = datetime.now() - t0

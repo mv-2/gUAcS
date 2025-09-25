@@ -31,7 +31,9 @@ from python_utils import (
   munk_profile,
   plot_rays,
   plot_pq,
+  plot_sound_field
 )
+import numpy as np
 from datetime import datetime
 from IPython.display import HTML
 ```
@@ -48,8 +50,8 @@ print(f"LogicalCores: {psutil.cpu_count(logical=True)}")
 ```
 
     x86_64
-    Physical Cores: 2
-    LogicalCores: 4
+    Physical Cores: 8
+    LogicalCores: 16
 
 # Geometric Ray Tracing
 
@@ -131,7 +133,7 @@ t = datetime.now() - t0
 print(f"Time required to complete simulation: {t}")
 ```
 
-    Time required to complete simulation: 0:00:00.590356
+    Time required to complete simulation: 0:00:00.050486
 
 To visualise the results call the `plot_rays` function.
 
@@ -194,6 +196,8 @@ plt.show()
 
 # Beam Tracing
 
+## P-Q Calculation
+
 The beam tracing process runs the initial geometric ray tracing
 algorithm followed by dynamic ray tracing and finally formulation of the
 beams. The beam intensity calculation is not yet implemented but some
@@ -207,7 +211,7 @@ selection of “BackwardEuler”, “RungeKutta4”, “Radau3IA” and “Radau
 prog_config = ProgConfig(max_it=int(1e5), max_range=2e5, min_range=-1.0,
                          depth_step=1.0, output_path="output_data")
 ray_config = RayConfig(prog_config=prog_config,
-                       env_config=env_config, sources=sources)
+                       env_config=env_config, sources=sources_iso)
 beam_config = BeamConfig(
     ray_config=ray_config, pq_solver="RungeKutta4", pressure_locs=[], window_width=None)
 ```
@@ -216,18 +220,18 @@ To run the simulation call the `trace_beams` function.
 
 ``` python
 t0 = datetime.now()
-beams = trace_beams(beam_config)
+beam_res = trace_beams(beam_config)
 t = datetime.now() - t0
 print(f"Time required to complete simulation: {t}")
 ```
 
-    Time required to complete simulation: 0:00:00.846206
+    Time required to complete simulation: 0:00:00.003785
 
 By taking the central ray from each beam object the same ray propagation
 plot can be created as before with the ray tracing approach.
 
 ``` python
-rays = [bm.central_ray for bm in beams]
+rays = [bm.central_ray for bm in beam_res.beams]
 ray_fig = plot_rays(config, rays)
 ```
 
@@ -237,7 +241,7 @@ The $p-q$ variables (as defined in docs/theory.pdf) can also be viewed
 to determine if the solver is stable.
 
 ``` python
-fig = plot_pq(beams[0:10])
+fig = plot_pq(beam_res.beams[0:10])
 fig.axes[0].set_xlim((0, 10))
 fig.axes[1].set_xlim((-1, 10))
 fig.axes[2].set_xlim((0, 20))
@@ -251,19 +255,25 @@ is an explicity solver. For a better chance, try the Radau3IIA method as
 this is an implicit solver for stiff equations.
 
 ``` python
+ranges = np.linspace(0, 5e4, 5001)
+depths = np.linspace(0, 5e3, 501)
+ranges, depths = np.meshgrid(ranges, depths)
+ranges = ranges.flatten()
+depths = depths.flatten()
+locs = [(ranges[i], depths[i]) for i in range(len(ranges))]
 beam_config = BeamConfig(
-    ray_config=ray_config, pq_solver="Radau3IIA", pressure_locs=[], window_width=None)
+    ray_config=ray_config, pq_solver="Radau3IIA", pressure_locs=locs, window_width=None)
 t0 = datetime.now()
-beams = trace_beams(beam_config)
+beam_res = trace_beams(beam_config)
 t = datetime.now() - t0
 print(f"Time required to complete simulation: {t}")
-fig = plot_pq(beams[0:10])
+fig = plot_pq(beam_res.beams[0:10])
 fig.axes[0].set_ylim((-1, 5))
 fig.axes[2].set_ylim((-1e-10, 5e-10))
 fig.axes[3].set_ylim((-1e-5, 3e-3))
 ```
 
-    Time required to complete simulation: 0:00:00.820478
+    Time required to complete simulation: 0:00:08.195565
 
 ![](example_notebook_files/figure-commonmark/cell-17-output-2.png)
 
@@ -271,3 +281,15 @@ This solver appears to be more stable but there are still significant
 issues with divergence after ~1000 iterations. Until this stability
 issue is explained or solved, pressure evaluation in the sound field
 cannot be accurately completed.
+
+## Pressure Field
+
+Calculation of the pressure field does not appear to be working
+correctly although it is unclear if this is an artefact of the shading
+or the result at this point in time.
+
+``` python
+plot_sound_field(cfg=beam_config.ray_config, beam_res=beam_res)
+```
+
+![](example_notebook_files/figure-commonmark/cell-18-output-1.png)
