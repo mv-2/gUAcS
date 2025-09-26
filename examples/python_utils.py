@@ -9,6 +9,7 @@ from typing import List, Iterable
 
 
 def munk_profile(depth: float) -> float:
+    # Munk sound speed profile defined by depth in m
     return 1500.0 * (
         1.0
         + 0.00737 * (2 * (depth - 1300) / 1500 - 1 + np.exp(-2 * (depth - 1300) / 1500))
@@ -16,10 +17,12 @@ def munk_profile(depth: float) -> float:
 
 
 def downward_refract(depth: float) -> float:
+    # Downward refraction sound speed profile defined by depth in m
     return 1677.3319 / np.sqrt(1 + 2.0 * 1.2276762 * depth / 1677.3319)
 
 
 def fix_rays(raw_rays: list) -> List[Ray]:
+    # Sets all ray values to array rather than list
     for i in range(len(raw_rays)):
         raw_rays[i].range_vals = np.array(raw_rays[i].range_vals)
         raw_rays[i].depth_vals = np.array(raw_rays[i].depth_vals)
@@ -28,6 +31,7 @@ def fix_rays(raw_rays: list) -> List[Ray]:
 
 
 def plot_environment(cfg_file: RayConfig) -> List:
+    # Plots 2D simulation environment based on RayConfig object. Returns figure and axes handles
     fig, ax = plt.subplots(1, 2, sharey=True, gridspec_kw={"width_ratios": [1, 4]})
     bodies = cfg_file.env_config.bodies
     ssp = cfg_file.env_config.ssp
@@ -68,6 +72,7 @@ def plot_environment(cfg_file: RayConfig) -> List:
 
 
 def plot_pq(beams: List[PyBeam]) -> Figure:
+    # plot evolution of pq derivatives
     fig, ax = plt.subplots(2, 2)
     for beam in beams:
         iters = list(range(len(beam.p_re)))
@@ -95,6 +100,8 @@ def plot_pq(beams: List[PyBeam]) -> Figure:
 
 
 def plot_rays(cfg: RayConfig, rays: list) -> Figure:
+    # plot resultant rays on backdrop defined by RayConfig
+
     fig, ax_rays, _, _ = plot_environment(cfg)
 
     for ray in rays:
@@ -106,6 +113,7 @@ def plot_rays(cfg: RayConfig, rays: list) -> Figure:
 
 
 def time_interp_rays(rays: list, time_vals: np.ndarray) -> List[Ray]:
+    # resample ray positions in equispaced time values required for animating propagation
     for i in range(len(rays)):
         rays[i].range_vals = np.interp(
             time_vals, rays[i].time_vals, rays[i].range_vals, right=np.nan
@@ -120,6 +128,7 @@ def time_interp_rays(rays: list, time_vals: np.ndarray) -> List[Ray]:
 def animate_propagation(
     cfg: RayConfig, rays: List[Ray], framerate: float, fast_fwd: float = 1
 ):
+    # Creates ray propagation animation. Note that timesteps must be sufficiently small to ensure that ray follows smooth path.
     fig, ax_rays, _, _ = plot_environment(cfg)
     max_time = np.nanmax([np.nanmax(ray.time_vals) for ray in rays])
     time_vals = np.arange(0.0, max_time, 1 / framerate)
@@ -143,6 +152,7 @@ def animate_propagation(
 
 
 def plot_sound_field(cfg: BeamConfig, beam_res: BeamResult):
+    # Plot heatmap of sound pressure
     _, ax, _, _ = plot_environment(cfg)
     ranges = [loc[0] / 1000.0 for loc in beam_res.pressures.locations]
     depths = [loc[1] for loc in beam_res.pressures.locations]
