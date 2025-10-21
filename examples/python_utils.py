@@ -156,7 +156,7 @@ def plot_sound_field(cfg: BeamConfig, beam_res: BeamResult):
     _, ax, _, _ = plot_environment(cfg)
     ranges = [loc[0] / 1000.0 for loc in beam_res.pressures.locations]
     depths = [loc[1] for loc in beam_res.pressures.locations]
-    magnitudes = beam_res.pressures.mag
+    magnitudes = [20 * np.log10(mag * 1e6) for mag in beam_res.pressures.mag]
 
     n_ranges = len(np.unique(ranges))
     n_depths = len(np.unique(depths))
@@ -165,13 +165,12 @@ def plot_sound_field(cfg: BeamConfig, beam_res: BeamResult):
     depths = np.reshape(depths, new_shape)
     magnitudes = np.reshape(magnitudes, new_shape)
 
-    ax.pcolormesh(
+    scat = ax.scatter(
         ranges,
         depths,
-        magnitudes,
-        shading="gouraud",
+        c=magnitudes,
         cmap="jet",
     )
-    # plt.colorbar(None, cax=ax)
+    plt.colorbar(scat)
 
     plt.show()

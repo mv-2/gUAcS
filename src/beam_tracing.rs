@@ -70,7 +70,7 @@ impl Beam {
             ang_step: init_source.ang_step,
         };
         bm.q_vals[0] = Complex::new(0.0, 1.0 / init_source.init_sound_speed);
-        bm.p_vals[0] = Complex::new(1.0, 0.0);
+        bm.p_vals[0] = Complex::new(init_source.init_sound_speed, 0.0);
         bm.c_vals[0] = init_source.init_sound_speed;
         bm
     }

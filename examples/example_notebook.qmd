@@ -118,7 +118,7 @@ As there may be some media which do not have a varying sound speed profile. To s
 ````{python}
 prog_config_iso = ProgConfig(max_it=10, depth_step=1.0, max_range=1e5,
                          min_range=-1.0, output_path="output_data")
-sources_iso = [SourceConfig(range_pos=-1.0, depth_pos=1000.0,
+sources_iso = [SourceConfig(range_pos=-1.0, depth_pos=3000.0,
                         ray_fan_limits=(-0.1, 0.2), n_rays=1, source_level=150, frequency=1000)]
 bodies_iso = []
 isospaces_iso = [IsoSpace(body=Body(range_vals=[-1.0, 1e5, 1e5, -1.0, -1.0], depth_vals=[
@@ -189,9 +189,9 @@ beam_res = trace_beams(beam_config)
 t = datetime.now() - t0
 print(f"Time required to complete simulation: {t}")
 fig = plot_pq(beam_res.beams[0:10])
-fig.axes[0].set_ylim((-1, 5))
-fig.axes[2].set_ylim((-1e-10, 5e-10))
-fig.axes[3].set_ylim((-1e-5, 3e-3))
+# fig.axes[0].set_ylim((-1, 5))
+# fig.axes[2].set_ylim((-1e-10, 5e-10))
+# fig.axes[3].set_ylim((-1e-5, 3e-3))
 ````
 This solver appears to be more stable but there are still significant issues with divergence after ~1000 iterations. Until this stability issue is explained or solved, pressure evaluation in the sound field cannot be accurately completed.
 
