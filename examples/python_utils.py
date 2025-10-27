@@ -4,8 +4,9 @@ from scipy.interpolate import splev
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.figure import Figure
+from matplotlib.axes import Axes
 from matplotlib.artist import Artist
-from typing import List, Iterable
+from typing import List, Iterable, Tuple
 
 
 def munk_profile(depth: float) -> float:
@@ -99,7 +100,7 @@ def plot_pq(beams: List[PyBeam]) -> Figure:
     return fig
 
 
-def plot_rays(cfg: RayConfig, rays: list) -> Figure:
+def plot_rays(cfg: RayConfig, rays: list) -> Tuple[Figure, Axes]:
     # plot resultant rays on backdrop defined by RayConfig
 
     fig, ax_rays, _, _ = plot_environment(cfg)
@@ -109,7 +110,7 @@ def plot_rays(cfg: RayConfig, rays: list) -> Figure:
             np.array(ray.range_vals) / 1000, ray.depth_vals, c="k", linewidth=0.5
         )
 
-    return fig
+    return fig, ax_rays
 
 
 def time_interp_rays(rays: list, time_vals: np.ndarray) -> List[Ray]:
@@ -153,22 +154,27 @@ def animate_propagation(
 
 def plot_sound_field(cfg: BeamConfig, beam_res: BeamResult):
     # Plot heatmap of sound pressure
-    _, ax, _, _ = plot_environment(cfg)
+    # _, ax, _, _ = plot_environment(cfg)
+    rays = [beam.central_ray for beam in beam_res.beams]
+    _, ax = plot_rays(cfg, rays)
     ranges = [loc[0] / 1000.0 for loc in beam_res.pressures.locations]
     depths = [loc[1] for loc in beam_res.pressures.locations]
-    magnitudes = [20 * np.log10(mag * 1e6) for mag in beam_res.pressures.mag]
+    magnitudes = [
+        20 * np.log10(mag * 1e6) if mag != 0 else -50 for mag in beam_res.pressures.mag
+    ]
 
     n_ranges = len(np.unique(ranges))
     n_depths = len(np.unique(depths))
-    new_shape = (n_ranges, n_depths)
+    new_shape = (n_depths, n_ranges)
     ranges = np.reshape(ranges, new_shape)
     depths = np.reshape(depths, new_shape)
     magnitudes = np.reshape(magnitudes, new_shape)
 
-    scat = ax.scatter(
+    scat = ax.pcolor(
         ranges,
         depths,
-        c=magnitudes,
+        magnitudes,
+        shading="nearest",
         cmap="jet",
     )
     plt.colorbar(scat)

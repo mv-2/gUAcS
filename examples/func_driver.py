@@ -33,7 +33,7 @@ if __name__ == "__main__":
             range_pos=0.0,
             depth_pos=1000.0,
             ray_fan_limits=(-0.1, 0.2),
-            n_rays=1,
+            n_rays=100,
             source_level=150,
             frequency=1000,
         )
@@ -54,16 +54,18 @@ if __name__ == "__main__":
         ),
     ]
 
-    isospaces = [
-        IsoSpace(
-            body=Body(
-                range_vals=[-100.0, 100000.0, 100000.0, -100.0, -100.0],
-                depth_vals=[0.0, 0.0, 5000.0, 5000.0, 0.0],
-            ),
-            sound_speed=1600.0,
-            density=1.5,
-        )
-    ]
+    # isospaces = [
+    #     IsoSpace(
+    #         body=Body(
+    #             range_vals=[-100.0, 100000.0, 100000.0, -100.0, -100.0],
+    #             depth_vals=[0.0, 0.0, 5000.0, 5000.0, 0.0],
+    #         ),
+    #         sound_speed=1600.0,
+    #         density=1.5,
+    #     )
+    # ]
+
+    isospaces = []
 
     max_depth = 5000
     depth_step = 10
@@ -82,7 +84,7 @@ if __name__ == "__main__":
     )
 
     prog_config = ProgConfig(
-        max_it=int(100),
+        max_it=int(1e5),
         depth_step=1.0,
         max_range=2e5,
         min_range=-10.0,

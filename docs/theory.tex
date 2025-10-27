@@ -392,10 +392,19 @@ Evaluate the terms individually.
 \end{align*}
 
 \subsection{Rederive ODEs}
+ODES:
 \begin{align*}
 	\frac{dq}{ds} = c(s)\cdot p(s)                                             \\
 	\frac{dp}{ds} = -\frac{\partial^2 c}{\partial n^2}\cdot\frac{q(s)}{c^2(s)} \\
 \end{align*}
+Radau 3 IIA derivation:
+\begin{align*}
+	\bm{x}_{n+1} = \bm{x}_n + \frac{1}{4}\cdot\left(3\cdot F_1 + F_2 \right)                                \\
+	F_1 = \Delta s \cdot f\left(s_n + \frac{\Delta s}{3}, \bm{x}_n + \frac{5}{12}F_1-\frac{1}{12}F_2\right) \\
+	F_2 = \Delta s \cdot f\left(s_n + \Delta s, \bm{x}_n + \frac{3}{4}F_1+\frac{1}{4}F_2\right)             \\
+	\therefore F_2 = \Delta s\cdot f\left(s_{n+1}, \bm{x}_{n+1} \right)
+\end{align*}
+
 
 \section{General Functions}
 \subsection{Sound Speed Profile Representation}
