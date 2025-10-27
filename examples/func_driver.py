@@ -33,7 +33,7 @@ if __name__ == "__main__":
             range_pos=0.0,
             depth_pos=1000.0,
             ray_fan_limits=(-0.1, 0.2),
-            n_rays=100,
+            n_rays=10,
             source_level=150,
             frequency=1000,
         )
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     isospaces = []
 
     max_depth = 5000
-    depth_step = 10
+    depth_step = 1
     ssp_depths = range(-2 * depth_step, max_depth + 3 * depth_step, depth_step)
     ssp_vals = [munk_profile(z) for z in ssp_depths]
 
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     prog_config = ProgConfig(
         max_it=int(1e5),
         depth_step=1.0,
-        max_range=2e5,
+        max_range=5e4,
         min_range=-10.0,
         output_path="output_data",
     )

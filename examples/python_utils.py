@@ -154,9 +154,9 @@ def animate_propagation(
 
 def plot_sound_field(cfg: BeamConfig, beam_res: BeamResult):
     # Plot heatmap of sound pressure
-    # _, ax, _, _ = plot_environment(cfg)
-    rays = [beam.central_ray for beam in beam_res.beams]
-    _, ax = plot_rays(cfg, rays)
+    _, ax, _, _ = plot_environment(cfg)
+    # rays = [beam.central_ray for beam in beam_res.beams]
+    # _, ax = plot_rays(cfg, rays)
     ranges = [loc[0] / 1000.0 for loc in beam_res.pressures.locations]
     depths = [loc[1] for loc in beam_res.pressures.locations]
     magnitudes = [
@@ -176,6 +176,8 @@ def plot_sound_field(cfg: BeamConfig, beam_res: BeamResult):
         magnitudes,
         shading="nearest",
         cmap="jet",
+        vmax=150,
+        vmin=100,
     )
     plt.colorbar(scat)
 

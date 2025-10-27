@@ -8,6 +8,7 @@ use rayon::prelude::*;
 use std::f64::consts::PI;
 
 const I: Complex<f64> = Complex::new(0.0, 1.0);
+const FOUR_PI: f64 = TWO_PI + TWO_PI;
 
 /// Stores Beam propagation
 #[derive(Clone)]
@@ -467,16 +468,17 @@ impl Beam {
         predicates
     }
 
-    /// Calculate pressure contribution from ray [`self`] at point [range, depth]
+    /// Calculate pressure contribution from beam [`self`] at point [range, depth]
     pub fn calculate_pressure(&self, range: &f64, depth: &f64) -> Complex<f64> {
         let pre_pressures: Vec<PressurePredicate> =
             self.calculate_pressure_predicates(range, depth);
         let ang_freq: f64 = TWO_PI * self.central_ray.frequency;
         // map over pressure predicates and sum all pressure contributions from Beam self
-        pre_pressures
-            .iter()
-            .map(|ent| ent.calculate_contribution(ang_freq))
-            .sum::<Complex<f64>>()
+        -(I / FOUR_PI)
+            * pre_pressures
+                .iter()
+                .map(|ent| ent.calculate_contribution(ang_freq, &self.c_vals[0]))
+                .sum::<Complex<f64>>()
     }
 }
 
@@ -491,9 +493,11 @@ struct PressurePredicate {
 
 impl PressurePredicate {
     /// Calculate ray coordinate contribution, disregarding spreading law
-    pub fn calculate_contribution(&self, ang_freq: f64) -> Complex<f64> {
-        (self.sound_speed / self.q).sqrt()
-            * (-I * ang_freq * (self.time + self.p * self.n.powi(2) / (self.q + self.q))).exp()
+    pub fn calculate_contribution(&self, ang_freq: f64, init_sound_speed: &f64) -> Complex<f64> {
+        (self.q.re / (self.q.im * init_sound_speed)).abs().sqrt()
+            * (self.sound_speed / self.q).sqrt()
+            * (-I * ang_freq * TWO_PI * (self.time + self.p * self.n.powi(2) / (self.q + self.q)))
+                .exp()
     }
 }
 
