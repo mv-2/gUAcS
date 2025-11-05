@@ -6,7 +6,7 @@ This project was created in order to develop knowledge for both the theory/physi
 
 For a more detailed description of the underlying theory please see the ``docs\theory.tex`` file (this should eventually be compiled as a pdf file and included under the releases section of this page).
 
-![Geometric ray tracing output](./examples/example_notebook_files/figure-commonmark/cell-8-output-1.png)
+![Geometric ray tracing output](./examples/example_notebook_files/figure-commonmark/cell-18-output-2.png)
 
 ## Examples & Theory
 

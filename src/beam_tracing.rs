@@ -163,7 +163,7 @@ impl Beam {
                     // derivation to check this.
                     let arc_step: f64 = 2.0
                         * (((beam.central_ray.ray_param * c_i1).signum()
-                            * std::f64::consts::FRAC_2_PI
+                            * std::f64::consts::FRAC_PI_2
                             - (beam.central_ray.ray_param * c_i).asin())
                             / (g_i * beam.central_ray.ray_param))
                             .abs();

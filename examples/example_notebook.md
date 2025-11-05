@@ -35,7 +35,6 @@ from python_utils import (
 )
 import numpy as np
 from datetime import datetime
-from IPython.display import HTML
 ```
 
 This will either be run on a reasonably powerful desktop or a laptop
@@ -49,7 +48,7 @@ print(f"Physical Cores: {psutil.cpu_count(logical=False)}")
 print(f"LogicalCores: {psutil.cpu_count(logical=True)}")
 ```
 
-    x86_64
+
     Physical Cores: 8
     LogicalCores: 16
 
@@ -133,7 +132,7 @@ t = datetime.now() - t0
 print(f"Time required to complete simulation: {t}")
 ```
 
-    Time required to complete simulation: 0:00:00.050486
+    Time required to complete simulation: 0:00:00.046727
 
 To visualise the results call the `plot_rays` function.
 
@@ -168,7 +167,7 @@ method.
 ``` python
 prog_config_iso = ProgConfig(max_it=10, depth_step=1.0, max_range=1e5,
                          min_range=-1.0, output_path="output_data")
-sources_iso = [SourceConfig(range_pos=-1.0, depth_pos=1000.0,
+sources_iso = [SourceConfig(range_pos=-1.0, depth_pos=3000.0,
                         ray_fan_limits=(-0.1, 0.2), n_rays=1, source_level=150, frequency=1000)]
 bodies_iso = []
 isospaces_iso = [IsoSpace(body=Body(range_vals=[-1.0, 1e5, 1e5, -1.0, -1.0], depth_vals=[
@@ -208,10 +207,20 @@ Firstly modify the config file to have a $p-q$ equation solver from the
 selection of “BackwardEuler”, “RungeKutta4”, “Radau3IA” and “Radau3IIA”.
 
 ``` python
-prog_config = ProgConfig(max_it=int(1e5), max_range=2e5, min_range=-1.0,
+prog_config = ProgConfig(max_it=int(1e5), max_range=5e4, min_range=-1.0,
                          depth_step=1.0, output_path="output_data")
+sources = [
+  SourceConfig(
+    range_pos=0.0, 
+    depth_pos=1000.0, 
+    ray_fan_limits=(0.05, 0.1), 
+    n_rays=10, 
+    source_level=1, 
+    frequency=1000
+  )
+]
 ray_config = RayConfig(prog_config=prog_config,
-                       env_config=env_config, sources=sources_iso)
+                       env_config=env_config, sources=sources)
 beam_config = BeamConfig(
     ray_config=ray_config, pq_solver="RungeKutta4", pressure_locs=[], window_width=None)
 ```
@@ -225,7 +234,7 @@ t = datetime.now() - t0
 print(f"Time required to complete simulation: {t}")
 ```
 
-    Time required to complete simulation: 0:00:00.003785
+    Time required to complete simulation: 0:00:00.002813
 
 By taking the central ray from each beam object the same ray propagation
 plot can be created as before with the ray tracing approach.
@@ -268,12 +277,9 @@ beam_res = trace_beams(beam_config)
 t = datetime.now() - t0
 print(f"Time required to complete simulation: {t}")
 fig = plot_pq(beam_res.beams[0:10])
-fig.axes[0].set_ylim((-1, 5))
-fig.axes[2].set_ylim((-1e-10, 5e-10))
-fig.axes[3].set_ylim((-1e-5, 3e-3))
 ```
 
-    Time required to complete simulation: 0:00:08.195565
+    Time required to complete simulation: 0:00:16.592194
 
 ![](example_notebook_files/figure-commonmark/cell-17-output-2.png)
 
@@ -284,9 +290,9 @@ cannot be accurately completed.
 
 ## Pressure Field
 
-Calculation of the pressure field does not appear to be working
-correctly although it is unclear if this is an artefact of the shading
-or the result at this point in time.
+Pressure field calculation appears somewhat reasonable although current
+results are completely unverified and further investigation will be
+undertaken.
 
 ``` python
 plot_sound_field(cfg=beam_config.ray_config, beam_res=beam_res)

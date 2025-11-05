@@ -32,7 +32,6 @@ from python_utils import (
 )
 import numpy as np
 from datetime import datetime
-from IPython.display import HTML
 ````
 
 # Setting Performance Expectations
@@ -147,10 +146,20 @@ The beam tracing process runs the initial geometric ray tracing algorithm follow
 
 Firstly modify the config file to have a $p-q$ equation solver from the selection of "BackwardEuler", "RungeKutta4", "Radau3IA" and "Radau3IIA".
 ````{python}
-prog_config = ProgConfig(max_it=int(1e5), max_range=2e5, min_range=-1.0,
+prog_config = ProgConfig(max_it=int(1e5), max_range=5e4, min_range=-1.0,
                          depth_step=1.0, output_path="output_data")
+sources = [
+  SourceConfig(
+    range_pos=0.0, 
+    depth_pos=1000.0, 
+    ray_fan_limits=(0.05, 0.1), 
+    n_rays=10, 
+    source_level=1, 
+    frequency=1000
+  )
+]
 ray_config = RayConfig(prog_config=prog_config,
-                       env_config=env_config, sources=sources_iso)
+                       env_config=env_config, sources=sources)
 beam_config = BeamConfig(
     ray_config=ray_config, pq_solver="RungeKutta4", pressure_locs=[], window_width=None)
 ````
@@ -189,14 +198,11 @@ beam_res = trace_beams(beam_config)
 t = datetime.now() - t0
 print(f"Time required to complete simulation: {t}")
 fig = plot_pq(beam_res.beams[0:10])
-# fig.axes[0].set_ylim((-1, 5))
-# fig.axes[2].set_ylim((-1e-10, 5e-10))
-# fig.axes[3].set_ylim((-1e-5, 3e-3))
 ````
 This solver appears to be more stable but there are still significant issues with divergence after ~1000 iterations. Until this stability issue is explained or solved, pressure evaluation in the sound field cannot be accurately completed.
 
 ## Pressure Field
-Calculation of the pressure field does not appear to be working correctly although it is unclear if this is an artefact of the shading or the result at this point in time.
+Pressure field calculation appears somewhat reasonable although current results are completely unverified and further investigation will be undertaken.
 ````{python}
 plot_sound_field(cfg=beam_config.ray_config, beam_res=beam_res)
 ````
