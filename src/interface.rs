@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 /// Overall config opject to aid in loading serialized config jsons
 #[derive(Deserialize, Debug, Clone)]
-#[pyclass]
+#[pyclass(from_py_object)]
 pub struct RayConfig {
     #[pyo3(get, set)]
     pub prog_config: ProgConfig,
@@ -18,7 +18,7 @@ pub struct RayConfig {
 
 /// Beam Config struct for python
 #[derive(Clone)]
-#[pyclass]
+#[pyclass(from_py_object)]
 pub struct BeamConfig {
     #[pyo3(get, set)]
     ray_config: RayConfig,
@@ -52,7 +52,7 @@ impl From<BeamConfig> for BeamConfigRust {
 
 /// RayConfig to store programmatic data not relevant to theory of simulation
 #[derive(Deserialize, Debug, Clone)]
-#[pyclass]
+#[pyclass(from_py_object)]
 pub struct ProgConfig {
     #[pyo3(get, set)]
     pub max_it: usize,
@@ -68,7 +68,7 @@ pub struct ProgConfig {
 
 /// Stores environmental constant data for simulation (SSP and density profile information)
 #[derive(Deserialize, Debug, Clone)]
-#[pyclass]
+#[pyclass(from_py_object)]
 pub struct EnvConfig {
     #[pyo3(get, set)]
     pub ssp: Ssp,
@@ -82,7 +82,7 @@ pub struct EnvConfig {
 
 /// Stores information of single source in sound field
 #[derive(Deserialize, Debug, Clone)]
-#[pyclass]
+#[pyclass(from_py_object)]
 pub struct SourceConfig {
     // eventually each ray should be set a source_level based on its angle and the type of shot
     #[pyo3(get, set)]
@@ -101,7 +101,7 @@ pub struct SourceConfig {
 
 /// Constant property space. Implementation will be usable for RF simulation as well
 #[derive(Deserialize, Debug, Clone)]
-#[pyclass]
+#[pyclass(from_py_object)]
 pub struct IsoSpace {
     #[pyo3(get, set)]
     pub body: Body,
@@ -114,7 +114,7 @@ pub struct IsoSpace {
 /// Python equivalent to [`PressureField`] object to allow for Complex values to be transmitted
 /// correctly
 #[derive(Clone)]
-#[pyclass]
+#[pyclass(from_py_object)]
 pub struct PressureFieldPy {
     #[pyo3(get, set)]
     pub locations: Vec<(f64, f64)>,

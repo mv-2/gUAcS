@@ -1,13 +1,14 @@
 from guacs.guacs import (
     BeamResult,
     trace_beams,
+    # trace_rays,
     RayConfig,
     BeamConfig,
     ProgConfig,
     EnvConfig,
     SourceConfig,
     Body,
-    IsoSpace,
+    # IsoSpace,
     Ssp,
 )
 from scipy.interpolate import splrep
@@ -22,7 +23,7 @@ from python_utils import (
     # plot_rays,
     # animate_propagation,
     # plot_pq,
-    plot_sound_field,
+    # plot_sound_field,
 )
 
 matplotlib.use("QtAgg")
@@ -32,8 +33,8 @@ if __name__ == "__main__":
         SourceConfig(
             range_pos=0.0,
             depth_pos=1000.0,
-            ray_fan_limits=(0.05, 0.1),
-            n_rays=10,
+            ray_fan_limits=(-0.2, 0.2),
+            n_rays=100,
             source_level=150,
             frequency=1000,
         )
@@ -45,11 +46,11 @@ if __name__ == "__main__":
         #     depth_vals=[1400.0, 1400.0, 1310.0, 1310.0, 1400.0],
         # ),
         Body(
-            range_vals=[0.0, 200000.0, 200000.0, 0.0, 0.0],
+            range_vals=[0.0, 5e4, 5e4, 0.0, 0.0],
             depth_vals=[5000.0, 5000.0, 5100.0, 5100.0, 5000.0],
         ),
         Body(
-            range_vals=[0.0, 200000.0, 200000.0, 0.0, 0.0],
+            range_vals=[0.0, 5e4, 5e4, 0.0, 0.0],
             depth_vals=[0.0, 0.0, -1.0, -1.0, 0.0],
         ),
     ]
@@ -69,7 +70,7 @@ if __name__ == "__main__":
 
     max_depth = 5000
     depth_step = 1
-    ssp_depths = range(-2 * depth_step, max_depth + 3 * depth_step, depth_step)
+    ssp_depths = range(-3 * depth_step, max_depth + 3 * depth_step, depth_step)
     ssp_vals = [munk_profile(z) for z in ssp_depths]
 
     spline_res: Tuple = splrep(ssp_depths, ssp_vals, k=3)
@@ -85,7 +86,7 @@ if __name__ == "__main__":
 
     prog_config = ProgConfig(
         max_it=int(1e5),
-        depth_step=1.0,
+        depth_step=10,
         max_range=5e4,
         min_range=-10.0,
         output_path="output_data",
@@ -95,8 +96,8 @@ if __name__ == "__main__":
         prog_config=prog_config, env_config=env_config, sources=sources
     )
 
-    ranges = np.linspace(0, 5e4, 5001)
-    depths = np.linspace(0, 5e3, 501)
+    ranges = np.linspace(0, 5e4, 500)
+    depths = np.linspace(0, 5e3, 500)
     ranges, depths = np.meshgrid(ranges, depths)
     ranges = ranges.flatten()
     depths = depths.flatten()
@@ -110,7 +111,7 @@ if __name__ == "__main__":
     )
     # rays = trace_rays(ray_config)
     beam_result: BeamResult = trace_beams(beam_config)
-    plot_sound_field(cfg=beam_config.ray_config, beam_res=beam_result)
+    # plot_sound_field(cfg=beam_config.ray_config, beam_res=beam_result)
     # beams = beam_result.beams
     # rays = [bm.central_ray for bm in beams]
     # rays = fix_rays(rays)

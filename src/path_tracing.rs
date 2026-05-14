@@ -1,8 +1,10 @@
 use crate::interface::{EnvConfig, IsoSpace, ProgConfig, RayConfig, SourceConfig};
-use crate::math_util::{deboor_alg, TWO_PI};
+use crate::math_util::{self, deboor_alg, TWO_PI};
 use core::f64;
 use csv::Writer;
-use pyo3::prelude::*;
+use eframe::egui;
+use egui_plot::*;
+use pyo3::pyclass;
 use rayon::prelude::*;
 use serde::Deserialize;
 use std::error::Error;
@@ -13,8 +15,8 @@ use uuid::Uuid;
 pub const REFLECT_OFFSET: f64 = 0.1;
 
 /// Stores data on body geometry
+#[pyclass(from_py_object)]
 #[derive(Deserialize, Debug, Clone)]
-#[pyclass]
 pub struct Body {
     // polygonal definition only
     #[pyo3(get, set)]
@@ -25,7 +27,7 @@ pub struct Body {
 }
 
 /// Stores Ray propagation data
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone)]
 pub struct Ray {
     #[pyo3(get, set)]
@@ -95,8 +97,8 @@ impl RayInit {
 }
 
 /// Stores sound speed profile data
+#[pyclass(from_py_object)]
 #[derive(Deserialize, Debug, Clone)]
-#[pyclass]
 pub struct Ssp {
     #[pyo3(get, set)]
     pub ssp_knots: Vec<f64>,
@@ -598,7 +600,8 @@ pub fn trace_rays(cfg: RayConfig) -> Vec<Ray> {
                 .collect(),
         );
     }
-    init_sources
+
+    let rays: Vec<Ray> = init_sources
         .par_iter()
         .map(|ray_source| {
             Ray::trace_from_init_source(
@@ -608,7 +611,103 @@ pub fn trace_rays(cfg: RayConfig) -> Vec<Ray> {
                 &cfg.env_config.ssp,
             )
         })
-        .collect()
+        .collect();
+
+    // egui stuff here
+    let native_options = eframe::NativeOptions {
+        ..eframe::NativeOptions::default()
+    };
+
+    let ray_display: RayDisplay = RayDisplay {
+        rays: rays.clone(),
+        bodies: cfg.env_config.bodies.clone(),
+        ssp: cfg.env_config.ssp,
+        ssp_pts: (0..5000).map(f64::from).collect(),
+    };
+
+    let _ = eframe::run_native(
+        RayDisplay::name(),
+        native_options,
+        Box::new(|_| Ok(Box::new(ray_display))),
+    );
+
+    rays
+}
+
+struct RayDisplay {
+    rays: Vec<Ray>,
+    bodies: Vec<Body>,
+    ssp: Ssp,
+    ssp_pts: Vec<f64>,
+}
+
+impl RayDisplay {
+    fn name() -> &'static str {
+        "Ray Paths"
+    }
+
+    fn ray_line(&self, i: usize) -> Line<'_> {
+        let points: PlotPoints = (0..self.rays[i].ray_iter)
+            .map(|id| [self.rays[i].range_vals[id], self.rays[i].depth_vals[id]])
+            .collect();
+        Line::new("Ray {i}", points).color(egui::Color32::from_rgb(u8::MAX, u8::MAX, u8::MAX))
+    }
+
+    fn fill_body(&self, i: usize) -> Polygon<'_> {
+        let points: PlotPoints = (0..self.bodies[i].depth_vals.len())
+            .map(|id| [self.bodies[i].range_vals[id], self.bodies[i].depth_vals[id]])
+            .collect();
+        Polygon::new("Body {i}", points)
+            .fill_color(egui::Color32::from_rgba_unmultiplied(0, 128, 0, 200))
+    }
+
+    fn ssp_line(&self, depth_points: &[f64]) -> Line<'_> {
+        let points: PlotPoints = depth_points
+            .iter()
+            .map(|&z| {
+                [
+                    math_util::deboor_alg(
+                        z,
+                        &self.ssp.ssp_knots,
+                        &self.ssp.ssp_coefs,
+                        self.ssp.ssp_degree,
+                    ),
+                    z,
+                ]
+            })
+            .collect();
+        Line::new("SSP", points).color(egui::Color32::from_rgb(u8::MAX, u8::MAX, u8::MAX))
+    }
+}
+
+impl eframe::App for RayDisplay {
+    fn ui(&mut self, ui: &mut eframe::egui::Ui, _: &mut eframe::Frame) {
+        let _ = egui::CentralPanel::default().show_inside(ui, |ui| {
+            let total_width: f32 = ui.available_width();
+            ui.horizontal_centered(|ui| {
+                Plot::new("SSP")
+                    .invert_y(true)
+                    .link_axis("ray_ssp", [false, true])
+                    .width(total_width * 0.2)
+                    .show(ui, |plot_ui| {
+                        plot_ui.line(self.ssp_line(&self.ssp_pts));
+                    });
+
+                Plot::new("Rays")
+                    .invert_y(true)
+                    .link_axis("ray_ssp", [false, true])
+                    .width(total_width * 0.8)
+                    .show(ui, |plot_ui| {
+                        for i in 0..self.rays.len() {
+                            plot_ui.line(self.ray_line(i));
+                        }
+                        for i in 0..self.bodies.len() {
+                            plot_ui.polygon(self.fill_body(i));
+                        }
+                    });
+            });
+        });
+    }
 }
 
 #[cfg(test)]
